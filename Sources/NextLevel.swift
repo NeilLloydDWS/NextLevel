@@ -2294,33 +2294,62 @@ extension NextLevel {
             self.isVideoCaptureSupported && (FileManager.availableStorageSpaceInBytes() > NextLevelRequiredMinimumStorageSpaceInBytes)
         }
     }
+    
+    
+    public func capturePhotoBracket()
+    {
+        guard let photoOutput = self._photoOutput, let _ = photoOutput.connection(with: AVMediaType.video) else {
+            return
+        }
+               let exposureValues: [Float] = [-2.0, -0.5, 0.5, 2.0]
+               let makeAutoExposureSettings = AVCaptureAutoExposureBracketedStillImageSettings.autoExposureSettings(exposureTargetBias:)
+               let exposureSettings = exposureValues.map(makeAutoExposureSettings)
+               
+               let photoSettings = AVCapturePhotoBracketSettings(rawPixelFormatType: 0,
+                                                                 processedFormat: [AVVideoCodecKey : AVVideoCodecType.jpeg],
+                                                                 bracketedSettings: exposureSettings)
+               photoSettings.isLensStabilizationEnabled = photoOutput.isLensStabilizationDuringBracketedCaptureSupported
 
-    // zoom
+               photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
 
-    /// Updates video capture zoom factor.
+    
     public var videoZoomFactor: Float {
         get {
-            if let device = self._currentDevice {
-                return Float(device.videoZoomFactor)
-            }
-            return 1.0 // prefer 1.0 instead of using an optional
+            guard let device = _currentDevice else { return 1.0 }
+            return Float(device.videoZoomFactor)
         }
         set {
+            // 1) Capture the new zoom and a rate
+            let zoomFactor = CGFloat(newValue)
+            let rate: Float = 1.0
+
+            // 2) Perform the ramp
             self.executeClosureAsyncOnSessionQueueIfNecessary {
-                if let device = self._currentDevice {
-                    do {
-                        try device.lockForConfiguration()
-
-                        device.videoZoomFactor = max(device.minAvailableVideoZoomFactor, min(CGFloat(newValue), device.activeFormat.videoMaxZoomFactor))
-
-                        device.unlockForConfiguration()
-                    } catch {
-                        print("NextLevel, zoomFactor failed to lock device for configuration")
-                    }
+                guard let device = self._currentDevice else { return }
+                do {
+                    try device.lockForConfiguration()
+                    device.ramp(toVideoZoomFactor: zoomFactor, withRate: rate)
+                    device.unlockForConfiguration()
+                } catch {
+                    print("NextLevel, zoomFactor failed to lock device for configuration: \(error)")
                 }
             }
         }
     }
+
+    // If you still want a standalone helper:
+    public func zoom(to zoomFactor: CGFloat, rate: Float) {
+        guard let device = _currentDevice else { return }
+        do {
+            try device.lockForConfiguration()
+            device.ramp(toVideoZoomFactor: zoomFactor, withRate: rate)
+            device.unlockForConfiguration()
+        } catch {
+            print("NextLevel, zoom failed to lock device for configuration: \(error)")
+        }
+    }
+
 
 	//
 	/// Fetch threshold value where a device of the specified type might be chosen when zooming in using a composite camera.
@@ -2334,6 +2363,20 @@ extension NextLevel {
 
 		return index > 0 ? device.virtualDeviceSwitchOverVideoZoomFactors[index - 1].floatValue : Float(device.minAvailableVideoZoomFactor)
 	}
+    
+    public func zoom(zoom: CGFloat, rate: Float) {
+            if let device = self._currentDevice {
+                do {
+                    try device.lockForConfiguration()
+
+                    device.ramp(toVideoZoomFactor: CGFloat(zoom), withRate: rate)
+
+                    device.unlockForConfiguration()
+                } catch {
+                    print("NextLevel, zoomFactor failed to lock device for configuration")
+                }
+            }
+        }
 
     /// Triggers a photo capture from the last video frame.
     public func capturePhotoFromVideo() {
