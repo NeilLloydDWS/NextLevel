@@ -30,10 +30,39 @@ import AVFoundation
 import ARKit
 #endif
 
+
+public enum PhotoAspectRatio: Equatable {
+    /// No cropping, deliver full-resolution image
+    case original
+    /// 1:1 square
+    case square
+    /// 4:3 (width:height)
+    case ratio4x3
+    /// 16:9 (width:height)
+    case ratio16x9
+    /// Custom integer ratio
+    case custom(width: Int, height: Int)
+
+    /// Returns the target width / height as a float ratio
+    var floatValue: CGFloat {
+        switch self {
+        case .original:    return 0  // signal “no crop”
+        case .square:      return 1
+        case .ratio4x3:    return 4.0 / 3.0
+        case .ratio16x9:   return 16.0 / 9.0
+        case .custom(let w, let h): return CGFloat(w) / CGFloat(h)
+        }
+    }
+}
+
+
+
 // MARK: - MediaTypeConfiguration
 
 /// NextLevelConfiguration, media capture configuration object
 public class NextLevelConfiguration {
+    
+    
 
     // MARK: - types
 
@@ -436,6 +465,12 @@ public class NextLevelPhotoConfiguration: NextLevelConfiguration {
     public var isPortraitEffectsMatteEnabled: Bool = false
 
     public var isRawCaptureEnabled: Bool = false
+    
+    // MARK: – PhotoAspectRatio support
+
+    /// Crop the final photo to this aspect ratio; default is no crop.
+    public var aspectRatio: PhotoAspectRatio = .original
+
 
     // MARK: - ivars
 

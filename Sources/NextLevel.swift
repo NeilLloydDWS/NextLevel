@@ -2852,30 +2852,105 @@ extension NextLevel: AVCapturePhotoCaptureDelegate {
         }
     }
 
-    public func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        // output dictionary
+//    public func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+//        // output dictionary
+//        var photoDict: [String: Any] = [:]
+//
+//        // exif metadata
+//        photoDict[NextLevelPhotoMetadataKey] = photo.metadata
+//        NextLevel.tiffMetadata.forEach { key, value in photoDict[key] = value }
+//
+//        // add file data
+//        let imageData = photo.fileDataRepresentation()
+//        if let data = imageData {
+//            photoDict[NextLevelPhotoFileDataKey] = data
+//        }
+//        
+//
+//        DispatchQueue.main.async {
+//            self.photoDelegate?.nextLevel(self, didFinishProcessingPhoto: photo, photoDict: photoDict, photoConfiguration: self.photoConfiguration)
+//        }
+//
+//        if let portraitEffectsMatte = photo.portraitEffectsMatte {
+//            DispatchQueue.main.async {
+//                self.portraitEffectsMatteDelegate?.portraitEffectsMatteOutput(self, didOutput: portraitEffectsMatte)
+//            }
+//        }
+//    }
+    
+    public func photoOutput(_ output: AVCapturePhotoOutput,
+                            didFinishProcessingPhoto photo: AVCapturePhoto,
+                            error: Error?) {
+
+        // 1. Build metadata dictionary
         var photoDict: [String: Any] = [:]
-
-        // exif metadata
         photoDict[NextLevelPhotoMetadataKey] = photo.metadata
-        NextLevel.tiffMetadata.forEach { key, value in photoDict[key] = value }
-
-        // add file data
-        let imageData = photo.fileDataRepresentation()
-        if let data = imageData {
-            photoDict[NextLevelPhotoFileDataKey] = data
+        NextLevel.tiffMetadata.forEach { key, value in
+            photoDict[key] = value
         }
 
+        // 2. Obtain JPEG data
+        if let data = photo.fileDataRepresentation() {
+
+            // 3. Crop if requested
+            let finalData: Data = {
+                guard self.photoConfiguration.aspectRatio != PhotoAspectRatio.original,
+                      let sourceImage = UIImage(data: data),
+                      let cgImage = sourceImage.cgImage else {
+                    return data
+                }
+
+                let width  = CGFloat(cgImage.width)
+                let height = CGFloat(cgImage.height)
+                let ratio  = self.photoConfiguration.aspectRatio.floatValue
+
+                let cropWidth:  CGFloat
+                let cropHeight: CGFloat
+                if width / height > ratio {
+                    cropHeight = height
+                    cropWidth  = height * ratio
+                } else {
+                    cropWidth  = width
+                    cropHeight = width / ratio
+                }
+
+                let originX = (width  - cropWidth)  / 2
+                let originY = (height - cropHeight) / 2
+                let cropRect = CGRect(x: originX,
+                                      y: originY,
+                                      width: cropWidth,
+                                      height: cropHeight)
+                                     .integral
+
+                guard let croppedCG = cgImage.cropping(to: cropRect) else {
+                    return data
+                }
+                let croppedImage = UIImage(cgImage: croppedCG,
+                                           scale: sourceImage.scale,
+                                           orientation: sourceImage.imageOrientation)
+                return croppedImage.jpegData(compressionQuality: 1.0) ?? data
+            }()
+
+            photoDict[NextLevelPhotoFileDataKey] = finalData
+        }
+
+        // 4. Dispatch to your delegate
         DispatchQueue.main.async {
-            self.photoDelegate?.nextLevel(self, didFinishProcessingPhoto: photo, photoDict: photoDict, photoConfiguration: self.photoConfiguration)
+            self.photoDelegate?.nextLevel(self,
+                                          didFinishProcessingPhoto: photo,
+                                          photoDict: photoDict,
+                                          photoConfiguration: self.photoConfiguration)
         }
 
-        if let portraitEffectsMatte = photo.portraitEffectsMatte {
+        // 5. Portrait effects matte
+        if let matte = photo.portraitEffectsMatte {
             DispatchQueue.main.async {
-                self.portraitEffectsMatteDelegate?.portraitEffectsMatteOutput(self, didOutput: portraitEffectsMatte)
+                self.portraitEffectsMatteDelegate?
+                    .portraitEffectsMatteOutput(self, didOutput: matte)
             }
         }
     }
+
 
     public func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
         DispatchQueue.main.async {
