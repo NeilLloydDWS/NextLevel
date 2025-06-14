@@ -2940,9 +2940,9 @@ extension NextLevel: AVCapturePhotoCaptureDelegate {
                 let requestedAspectRatio = self.photoConfiguration.aspectRatio
 
                 // If the requested aspect ratio is 'original', no cropping is needed.
-                guard requestedAspectRatio != PhotoAspectRatio.original else {
-                    return data
-                }
+                guard requestedAspectRatio != .original else { // Was .original before too
+                       return data
+                   }
 
                 guard let sourceImage = UIImage(data: data),
                       let cgImage = sourceImage.cgImage else {

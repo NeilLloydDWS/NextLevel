@@ -31,34 +31,34 @@ import ARKit
 #endif
 
 
-public enum PhotoAspectRatio: Equatable {
-    /// No cropping, deliver full-resolution image
-    case original
-    /// 1:1 square
-    case square
-    /// 4:3 (width:height)
-    case ratio4x3
-    case ratio3x4
-    /// 16:9 (width:height)
-    case ratio16x9
-    case ratio9x16
-    /// Custom integer ratio
-    case custom(width: Int, height: Int)
-    
-    /// Returns the target width / height as a float ratio
-    var floatValue: CGFloat {
-        switch self {
-        case .original:    return 0  // signal “no crop”
-        case .square:      return 1
-        case .ratio4x3:    return 4.0 / 3.0
-        case .ratio3x4:   return 3.0 / 4.0
-        case .ratio16x9:   return 16.0 / 9.0
-        case .ratio9x16:   return 9.0 / 16.0
-        case .custom(let w, let h): return CGFloat(w) / CGFloat(h)
-        }
-    }
-}
-
+//public enum PhotoAspectRatio: Equatable {
+//    /// No cropping, deliver full-resolution image
+//    case original
+//    /// 1:1 square
+//    case square
+//    /// 4:3 (width:height)
+//    case ratio4x3
+//    case ratio3x4
+//    /// 16:9 (width:height)
+//    case ratio16x9
+//    case ratio9x16
+//    /// Custom integer ratio
+//    case custom(width: Int, height: Int)
+//    
+//    /// Returns the target width / height as a float ratio
+//    var floatValue: CGFloat {
+//        switch self {
+//        case .original:    return 0  // signal “no crop”
+//        case .square:      return 1
+//        case .ratio4x3:    return 4.0 / 3.0
+//        case .ratio3x4:   return 3.0 / 4.0
+//        case .ratio16x9:   return 16.0 / 9.0
+//        case .ratio9x16:   return 9.0 / 16.0
+//        case .custom(let w, let h): return CGFloat(w) / CGFloat(h)
+//        }
+//    }
+//}
+//
 
 
 // MARK: - MediaTypeConfiguration
@@ -83,102 +83,222 @@ public class NextLevelConfiguration {
     /// - instagramStories: 9:16 Instagram stories
     /// - cinematic: 2.35:1 cinematic
     /// - custom: custom aspect ratio
-    public enum AspectRatio: CustomStringConvertible {
-        case active
+    //    public enum AspectRatio: CustomStringConvertible {
+    //        case active
+    //        case square
+    //        case standard
+    //        case standardLandscape
+    //        case widescreen
+    //        case widescreenLandscape
+    //        case twitter
+    //        case youtube
+    //        case instagram
+    //        case instagramLandscape
+    //        case instagramStories
+    //        case cinematic
+    //        case custom(w: Int, h: Int)
+    //
+    //        public var dimensions: CGSize? {
+    //            get {
+    //                switch self {
+    //                case .active:
+    //                    return nil
+    //                case .square:
+    //                    return CGSize(width: 1, height: 1)
+    //                case .standard:
+    //                    return CGSize(width: 3, height: 4)
+    //                case .standardLandscape:
+    //                    return CGSize(width: 4, height: 3)
+    //                case .widescreen:
+    //                    return CGSize(width: 9, height: 16)
+    //                case .twitter, .youtube:
+    //                    fallthrough
+    //                case .widescreenLandscape:
+    //                    return CGSize(width: 16, height: 9)
+    //                case .instagram:
+    //                    return CGSize(width: 4, height: 5)
+    //                case .instagramLandscape:
+    //                    return CGSize(width: 5, height: 4)
+    //                case .instagramStories:
+    //                    return CGSize(width: 9, height: 16)
+    //                case .cinematic:
+    //                    return CGSize(width: 2.35, height: 1)
+    //                case .custom(let w, let h):
+    //                    return CGSize(width: w, height: h)
+    //                }
+    //            }
+    //        }
+    //
+    //        public var ratio: CGFloat? {
+    //            get {
+    //                switch self {
+    //                case .active:
+    //                    return nil
+    //                case .square:
+    //                    return 1
+    //                case .custom(let w, let h):
+    //                    return CGFloat(h) / CGFloat(w)
+    //                default:
+    //                    if let w = self.dimensions?.width,
+    //                       let h = self.dimensions?.height {
+    //                        return h / w
+    //                    } else {
+    //                        return nil
+    //                    }
+    //                }
+    //            }
+    //        }
+    //
+    //        public var description: String {
+    //            get {
+    //                switch self {
+    //                case .active:
+    //                    return "Active"
+    //                case .square:
+    //                    return "1:1 Square"
+    //                case .standard:
+    //                    return "3:4 Standard"
+    //                case .standardLandscape:
+    //                    return "4:3 Standard Landscape"
+    //                case .widescreen:
+    //                    return "9:16 Widescreen HD"
+    //                case .widescreenLandscape:
+    //                    return "16:9 Widescreen Landscape HD"
+    //                case .twitter:
+    //                    return "16:9 Twitter Widescreen Landscape HD"
+    //                case .youtube:
+    //                    return "16:9 YouTube Widescreen Landscape HD"
+    //                case .instagram:
+    //                    return "4:5 Instagram"
+    //                case .instagramLandscape:
+    //                    return "5:4 Instagram Landscape"
+    //                case .instagramStories:
+    //                    return "9:16 Instagram Stories"
+    //                case .cinematic:
+    //                    return "2.35:1 Cinematic"
+    //                case .custom(let w, let h):
+    //                    return "\(w):\(h) Custom"
+    //                }
+    //            }
+    //        }
+    //    }
+    
+    // In NextLevelConfiguration.swift
+    public enum AspectRatio: CustomStringConvertible, Equatable {
+        /// Use the aspect ratio of the source (video preset or original photo). Does not crop.
+        case original
+        
+        /// 1:1
         case square
+        
+        /// 3:4
         case standard
+        
+        /// 4:3
         case standardLandscape
+        
+        /// 9:16
         case widescreen
+        
+        /// 16:9
         case widescreenLandscape
+        
+        /// 16:9, alias for widescreenLandscape
         case twitter
+        
+        /// 16:9, alias for widescreenLandscape
         case youtube
+        
+        /// 4:5
         case instagram
+        
+        /// 5:4
         case instagramLandscape
+        
+        /// 9:16, alias for widescreen
         case instagramStories
+        
+        /// 2.35:1
         case cinematic
+        
+        /// Custom aspect ratio
         case custom(w: Int, h: Int)
         
-        public var dimensions: CGSize? {
-            get {
-                switch self {
-                case .active:
-                    return nil
-                case .square:
-                    return CGSize(width: 1, height: 1)
-                case .standard:
-                    return CGSize(width: 3, height: 4)
-                case .standardLandscape:
-                    return CGSize(width: 4, height: 3)
-                case .widescreen:
-                    return CGSize(width: 9, height: 16)
-                case .twitter, .youtube:
-                    fallthrough
-                case .widescreenLandscape:
-                    return CGSize(width: 16, height: 9)
-                case .instagram:
-                    return CGSize(width: 4, height: 5)
-                case .instagramLandscape:
-                    return CGSize(width: 5, height: 4)
-                case .instagramStories:
-                    return CGSize(width: 9, height: 16)
-                case .cinematic:
-                    return CGSize(width: 2.35, height: 1)
-                case .custom(let w, let h):
-                    return CGSize(width: w, height: h)
-                }
+        // Helper to get the numeric dimensions
+        private var _dimensions: CGSize? {
+            switch self {
+            case .original:
+                return nil
+            case .square:
+                return CGSize(width: 1, height: 1)
+            case .standard:
+                return CGSize(width: 3, height: 4)
+            case .standardLandscape:
+                return CGSize(width: 4, height: 3)
+            case .widescreen, .instagramStories:
+                return CGSize(width: 9, height: 16)
+            case .widescreenLandscape, .twitter, .youtube:
+                return CGSize(width: 16, height: 9)
+            case .instagram:
+                return CGSize(width: 4, height: 5)
+            case .instagramLandscape:
+                return CGSize(width: 5, height: 4)
+            case .cinematic:
+                return CGSize(width: 2.35, height: 1)
+            case .custom(let w, let h):
+                return CGSize(width: w, height: h)
             }
         }
         
+        /// For video configuration (`AVVideoWidthKey`, etc.). Returns relative dimensions.
+        public var dimensions: CGSize? {
+            return _dimensions
+        }
+        
+        /// For video configuration calculations. Returns ratio of `height / width`.
         public var ratio: CGFloat? {
-            get {
-                switch self {
-                case .active:
-                    return nil
-                case .square:
-                    return 1
-                case .custom(let w, let h):
-                    return CGFloat(h) / CGFloat(w)
-                default:
-                    if let w = self.dimensions?.width,
-                       let h = self.dimensions?.height {
-                        return h / w
-                    } else {
-                        return nil
-                    }
-                }
-            }
+            guard let dims = _dimensions else { return nil }
+            guard dims.width > 0 else { return nil }
+            return dims.height / dims.width
+        }
+        
+        /// For photo cropping calculations. Returns ratio of `width / height`.
+        /// Returns 0 for `.original` to signal "no crop".
+        public var floatValue: CGFloat {
+            guard let dims = _dimensions else { return 0 }
+            guard dims.height > 0 else { return 0 }
+            return dims.width / dims.height
         }
         
         public var description: String {
-            get {
-                switch self {
-                case .active:
-                    return "Active"
-                case .square:
-                    return "1:1 Square"
-                case .standard:
-                    return "3:4 Standard"
-                case .standardLandscape:
-                    return "4:3 Standard Landscape"
-                case .widescreen:
-                    return "9:16 Widescreen HD"
-                case .widescreenLandscape:
-                    return "16:9 Widescreen Landscape HD"
-                case .twitter:
-                    return "16:9 Twitter Widescreen Landscape HD"
-                case .youtube:
-                    return "16:9 YouTube Widescreen Landscape HD"
-                case .instagram:
-                    return "4:5 Instagram"
-                case .instagramLandscape:
-                    return "5:4 Instagram Landscape"
-                case .instagramStories:
-                    return "9:16 Instagram Stories"
-                case .cinematic:
-                    return "2.35:1 Cinematic"
-                case .custom(let w, let h):
-                    return "\(w):\(h) Custom"
-                }
+            // ... implementation remains similar, but .active is now .original
+            switch self {
+            case .original:
+                return "Original"
+            case .square:
+                return "1:1 Square"
+            case .standard:
+                return "3:4 Standard"
+            case .standardLandscape:
+                return "4:3 Standard Landscape"
+            case .widescreen:
+                return "9:16 Widescreen HD"
+            case .widescreenLandscape:
+                return "16:9 Widescreen Landscape HD"
+            case .twitter:
+                return "16:9 Twitter Widescreen Landscape HD"
+            case .youtube:
+                return "16:9 YouTube Widescreen Landscape HD"
+            case .instagram:
+                return "4:5 Instagram"
+            case .instagramLandscape:
+                return "5:4 Instagram Landscape"
+            case .instagramStories:
+                return "9:16 Instagram Stories"
+            case .cinematic:
+                return "2.35:1 Cinematic"
+            case .custom(let w, let h):
+                return "\(w):\(h) Custom"
             }
         }
     }
@@ -227,7 +347,7 @@ public class NextLevelVideoConfiguration: NextLevelConfiguration {
     public var dimensions: CGSize?
     
     /// Output aspect ratio automatically sizes output dimensions, `active` indicates NextLevelVideoConfiguration.preset or NextLevelVideoConfiguration.dimensions
-    public var aspectRatio: AspectRatio = .active
+    public var aspectRatio: AspectRatio = .original
     
     /// Video output transform for display
     public var transform: CGAffineTransform = .identity
@@ -301,7 +421,7 @@ public class NextLevelVideoConfiguration: NextLevelConfiguration {
                 config[AVVideoWidthKey] = NSNumber(integerLiteral: Int(videoDimensions.width))
                 config[AVVideoHeightKey] = NSNumber(integerLiteral: Int(videoDimensions.width * Int32(h) / Int32(w)))
                 break
-            case .active:
+            case .original:
                 fallthrough
             default:
                 config[AVVideoWidthKey] = NSNumber(integerLiteral: Int(videoDimensions.width))
@@ -473,7 +593,7 @@ public class NextLevelPhotoConfiguration: NextLevelConfiguration {
     // MARK: – PhotoAspectRatio support
     
     /// Crop the final photo to this aspect ratio; default is no crop.
-    public var aspectRatio: PhotoAspectRatio = .original
+    public var aspectRatio: AspectRatio = .original
     
     
     // MARK: - ivars
