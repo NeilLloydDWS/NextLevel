@@ -2922,8 +2922,8 @@ extension NextLevel: AVCapturePhotoCaptureDelegate {
 //    }
     
     public func photoOutput(_ output: AVCapturePhotoOutput,
-                            didFinishProcessingPhoto photo: AVCapturePhoto,
-                            error: Error?) {
+                                didFinishProcessingPhoto photo: AVCapturePhoto,
+                                error: Error?) {
 
         // 1. Build metadata dictionary
         var photoDict: [String: Any] = [:]
@@ -2935,30 +2935,57 @@ extension NextLevel: AVCapturePhotoCaptureDelegate {
         // 2. Obtain JPEG data
         if let data = photo.fileDataRepresentation() {
 
-            // 3. Crop if requested
+            // 3. Crop if needed
             let finalData: Data = {
-                guard self.photoConfiguration.aspectRatio != PhotoAspectRatio.original,
-                      let sourceImage = UIImage(data: data),
-                      let cgImage = sourceImage.cgImage else {
+                let requestedAspectRatio = self.photoConfiguration.aspectRatio
+
+                // If the requested aspect ratio is 'original', no cropping is needed.
+                guard requestedAspectRatio != PhotoAspectRatio.original else {
                     return data
                 }
 
-                let width  = CGFloat(cgImage.width)
-                let height = CGFloat(cgImage.height)
-                let ratio  = self.photoConfiguration.aspectRatio.floatValue
+                guard let sourceImage = UIImage(data: data),
+                      let cgImage = sourceImage.cgImage else {
+                    // If UIImage or CGImage cannot be created, return original data
+                    return data
+                }
+
+                let imageWidth  = CGFloat(cgImage.width)
+                let imageHeight = CGFloat(cgImage.height)
+                let currentImageAspectRatio = imageWidth / imageHeight
+                let targetAspectRatio = requestedAspectRatio.floatValue
+
+                // Check if the current image aspect ratio already matches the target.
+                // Using a small epsilon for floating point comparison to avoid precision issues.
+                let epsilon: CGFloat = 0.001 // Adjust epsilon if needed for your specific use case
+                if abs(currentImageAspectRatio - targetAspectRatio) < epsilon {
+                    // Aspect ratio already matches, no actual cropping is needed.
+                    // We still convert to UIImage and then JPEG data to ensure consistency
+                    // with the `compressionQuality: 1.0` and `orientation` handling,
+                    // but a more aggressive optimization could just return `data` here.
+                    // For simplicity and avoiding double compression, let's just return original data
+                    // if no *actual* cropping will occur.
+                    return data
+                }
+
+                // If we reach here, a non-original aspect ratio is requested AND
+                // the current image's aspect ratio does NOT match the requested one,
+                // so actual cropping is necessary.
 
                 let cropWidth:  CGFloat
                 let cropHeight: CGFloat
-                if width / height > ratio {
-                    cropHeight = height
-                    cropWidth  = height * ratio
+                if currentImageAspectRatio > targetAspectRatio {
+                    // Image is wider than target, crop width
+                    cropHeight = imageHeight
+                    cropWidth  = imageHeight * targetAspectRatio
                 } else {
-                    cropWidth  = width
-                    cropHeight = width / ratio
+                    // Image is taller than target, crop height
+                    cropWidth  = imageWidth
+                    cropHeight = imageWidth / targetAspectRatio
                 }
 
-                let originX = (width  - cropWidth)  / 2
-                let originY = (height - cropHeight) / 2
+                let originX = (imageWidth  - cropWidth)  / 2
+                let originY = (imageHeight - cropHeight) / 2
                 let cropRect = CGRect(x: originX,
                                       y: originY,
                                       width: cropWidth,
@@ -2966,13 +2993,15 @@ extension NextLevel: AVCapturePhotoCaptureDelegate {
                                      .integral
 
                 guard let croppedCG = cgImage.cropping(to: cropRect) else {
+                    // Cropping failed for some reason, return original data
                     return data
                 }
+
                 let croppedImage = UIImage(cgImage: croppedCG,
                                            scale: sourceImage.scale,
                                            orientation: sourceImage.imageOrientation)
                 return croppedImage.jpegData(compressionQuality: 1.0) ?? data
-            }()
+            }() // End of finalData closure
 
             photoDict[NextLevelPhotoFileDataKey] = finalData
         }
