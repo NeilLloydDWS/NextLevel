@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 import CoreImage
+import UIKit
 
 /// Manages photo outputs for independent cameras with different settings
 public class NextLevelPhotoOutputManager: NSObject {

@@ -8,6 +8,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 
 /// Multi-camera output mode
 public enum MultiCameraOutputModeV2: Int {
@@ -199,7 +200,7 @@ public class NextLevelMultiCameraConfigurationV2: NSObject {
         
         // Adjust maximum cameras based on device
         if deviceModel.contains("iPhone") {
-            if device.userInterfaceIdiom == .phone {
+            if device.userInterfaceIdiom == UIUserInterfaceIdiom.phone {
                 // iPhone 15 Pro and later support 3+ cameras
                 if isNeweriPhone() {
                     maximumSimultaneousCameras = 3

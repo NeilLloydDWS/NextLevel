@@ -10,6 +10,7 @@ import Foundation
 import AVFoundation
 import CoreMedia
 import CoreVideo
+import UIKit
 
 /// Manages buffer allocation and recycling for multi-camera capture
 public class NextLevelBufferManager {
