@@ -8,6 +8,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 
 // MARK: - Supporting Types
 
@@ -157,7 +158,7 @@ extension NextLevel {
                               completion: @escaping (UIImage?, Error?) -> Void) {
         // Capture photo method would be called here
         // multiCameraSessionV2?.capturePhoto(at: position, flashMode: flashMode, completion: completion)
-        completion(nil, NextLevelError.unknown)
+        completion(nil as UIImage?, NextLevelError.unknown)
     }
     
     /// Capture photo from all cameras
