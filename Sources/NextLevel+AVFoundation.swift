@@ -159,6 +159,60 @@ extension AVCaptureDevice {
         focalLengthX = abs( Float(dimensions.width) / (2.0 * tan(horizontalFieldOfView / 180.0 * .pi / 2 )) )
         focalLengthY = abs( Float(dimensions.height) / (2.0 * tan(verticalFieldOfView / 180.0 * .pi / 2 )) )
     }
+    
+    // MARK: - multi-camera support
+    
+    /// Returns all available capture devices for multi-camera session
+    ///
+    /// - Returns: Array of devices that support multi-camera capture
+    public class func multiCameraDevices() -> [AVCaptureDevice] {
+        guard AVCaptureMultiCamSession.isMultiCamSupported else {
+            return []
+        }
+        
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [
+            .builtInWideAngleCamera,
+            .builtInTelephotoCamera,
+            .builtInUltraWideCamera
+        ]
+        
+        let discoverySession = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
+            mediaType: .video,
+            position: .unspecified
+        )
+        
+        return discoverySession.devices.filter { device in
+            // Check if device supports multi-camera by checking a format
+            if let format = device.formats.first(where: { $0.isMultiCamSupported }) {
+                return format.isMultiCamSupported
+            }
+            return false
+        }
+    }
+    
+    /// Checks if a specific device supports multi-camera capture
+    ///
+    /// - Returns: true if the device has at least one format that supports multi-camera
+    public var supportsMultiCamera: Bool {
+        return self.formats.contains { $0.isMultiCamSupported }
+    }
+    
+    /// Returns the best format for multi-camera capture
+    ///
+    /// - Returns: Best format that supports multi-camera, preferring lower resolutions for performance
+    public var bestMultiCameraFormat: AVCaptureDevice.Format? {
+        let multiCamFormats = self.formats.filter { $0.isMultiCamSupported }
+        
+        // Sort by resolution (prefer lower resolutions for better performance)
+        return multiCamFormats.sorted { format1, format2 in
+            let dims1 = CMVideoFormatDescriptionGetDimensions(format1.formatDescription)
+            let dims2 = CMVideoFormatDescriptionGetDimensions(format2.formatDescription)
+            let pixels1 = Int(dims1.width) * Int(dims1.height)
+            let pixels2 = Int(dims2.width) * Int(dims2.height)
+            return pixels1 < pixels2
+        }.first
+    }
 
 }
 

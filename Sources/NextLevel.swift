@@ -126,6 +126,8 @@ public enum NextLevelCaptureMode: Int, CustomStringConvertible {
     case movie
     case arKit
     case arKitWithoutAudio
+    case multiCamera
+    case multiCameraWithoutAudio
 
     public var description: String {
         get {
@@ -144,6 +146,10 @@ public enum NextLevelCaptureMode: Int, CustomStringConvertible {
                 return "ARKit"
             case .arKitWithoutAudio:
                 return "ARKit without Audio"
+            case .multiCamera:
+                return "Multi-Camera"
+            case .multiCameraWithoutAudio:
+                return "Multi-Camera without Audio"
             }
         }
     }
@@ -194,6 +200,12 @@ public enum NextLevelError: Error, CustomStringConvertible {
     case fileExists
     case nothingRecorded
     case notReadyToRecord
+    case invalidConfiguration(String)
+    case insufficientResources
+    case unableToAddInput
+    case unableToAddOutput
+    case multiCamNotSupported
+    case multiCameraNotConfigured
 
     public var description: String {
         get {
@@ -212,6 +224,18 @@ public enum NextLevelError: Error, CustomStringConvertible {
                 return "Nothing recorded"
             case .notReadyToRecord:
                 return "NextLevel is not ready to record"
+            case .invalidConfiguration(let message):
+                return "Invalid configuration: \(message)"
+            case .insufficientResources:
+                return "Insufficient resources for operation"
+            case .unableToAddInput:
+                return "Unable to add input to capture session"
+            case .unableToAddOutput:
+                return "Unable to add output to capture session"
+            case .multiCamNotSupported:
+                return "Multi-camera capture is not supported on this device"
+            case .multiCameraNotConfigured:
+                return "Multi-camera mode is not configured"
             }
         }
     }
@@ -242,6 +266,8 @@ public class NextLevel: NSObject {
     #endif
     public weak var portraitEffectsMatteDelegate: NextLevelPortraitEffectsMatteDelegate?
     public weak var metadataObjectsDelegate: NextLevelMetadataOutputObjectsDelegate?
+    public weak var multiCameraDelegate: NextLevelMultiCameraDelegate?
+    public weak var multiCameraV2Delegate: NextLevelMultiCameraV2Delegate?
 
     // preview
 
@@ -264,6 +290,14 @@ public class NextLevel: NSObject {
         get {
             self._arConfiguration as? NextLevelARConfiguration
         }
+    }
+    
+    /// Configuration for multi-camera capture
+    public var multiCameraConfiguration: NextLevelMultiCameraConfiguration
+    
+    /// Checks if multi-camera capture is supported on the current device
+    public var isMultiCameraSupported: Bool {
+        return AVCaptureMultiCamSession.isMultiCamSupported
     }
 
     // audio configuration
@@ -367,6 +401,11 @@ public class NextLevel: NSObject {
             case .arKitWithoutAudio:
                 return self._arRunning
             #endif
+            case .multiCamera, .multiCameraWithoutAudio:
+                if let session = self._multiCamSession {
+                    return session.isRunning
+                }
+                return false
             default:
                 if let session = self._captureSession {
                     return session.isRunning
@@ -413,6 +452,15 @@ public class NextLevel: NSObject {
     // AVFoundation
 
     internal var _captureSession: AVCaptureSession?
+    
+    // Multi-camera support
+    internal var _multiCamSession: AVCaptureMultiCamSession?
+    internal var _videoInputs: [NextLevelDevicePosition: AVCaptureDeviceInput] = [:]
+    internal var _videoOutputs: [NextLevelDevicePosition: AVCaptureVideoDataOutput] = [:]
+    internal var _multiCameraRecording: NextLevelMultiCameraRecording?
+    internal var multiCameraSessionV2: NextLevelMultiCameraSession?
+    internal var multiCameraConfigurationV2: NextLevelMultiCameraConfigurationV2?
+    internal var recordingCameras: [NextLevelDevicePosition: URL] = [:]
 
     internal var _videoInput: AVCaptureDeviceInput?
     internal var _audioInput: AVCaptureDeviceInput?
@@ -467,6 +515,7 @@ public class NextLevel: NSObject {
         self.videoConfiguration = NextLevelVideoConfiguration()
         self.audioConfiguration = NextLevelAudioConfiguration()
         self.photoConfiguration = NextLevelPhotoConfiguration()
+        self.multiCameraConfiguration = NextLevelMultiCameraConfiguration()
         #if USE_ARKIT
         self._arConfiguration = NextLevelARConfiguration()
         #endif
@@ -476,6 +525,9 @@ public class NextLevel: NSObject {
         self.addApplicationObservers()
         self.addSessionObservers()
         self.addDeviceObservers()
+        
+        // Add thermal state monitoring for multi-camera
+        self.addThermalStateObserver()
     }
 
     deinit {
@@ -493,6 +545,7 @@ public class NextLevel: NSObject {
         self.removeApplicationObservers()
         self.removeSessionObservers()
         self.removeDeviceObservers()
+        self.removeThermalStateObserver()
 
         if let session = self._captureSession {
             self.beginConfiguration()
@@ -572,6 +625,12 @@ extension NextLevel {
             let videoStatus = NextLevel.authorizationStatus(forMediaType: AVMediaType.video)
             return (audioStatus == .authorized && videoStatus == .authorized) ? .authorized : .notAuthorized
         case .photo:
+            return NextLevel.authorizationStatus(forMediaType: AVMediaType.video)
+        case .multiCamera:
+            let audioStatus = NextLevel.authorizationStatus(forMediaType: AVMediaType.audio)
+            let videoStatus = NextLevel.authorizationStatus(forMediaType: AVMediaType.video)
+            return (audioStatus == .authorized && videoStatus == .authorized) ? .authorized : .notAuthorized
+        case .multiCameraWithoutAudio:
             return NextLevel.authorizationStatus(forMediaType: AVMediaType.video)
         }
     }
@@ -768,6 +827,13 @@ extension NextLevel {
         case .arKitWithoutAudio:
             shouldConfigureVideo = true
             break
+        case .multiCamera:
+            shouldConfigureVideo = true
+            shouldConfigureAudio = true
+            break
+        case .multiCameraWithoutAudio:
+            shouldConfigureVideo = true
+            break
         }
 
         if shouldConfigureVideo == true {
@@ -888,9 +954,217 @@ extension NextLevel {
         case .arKit, .arKitWithoutAudio:
             // no AV inputs to setup
             break
+        case .multiCamera, .multiCameraWithoutAudio:
+            // Multi-camera uses a different configuration method
+            self.commitConfiguration()
+            self.configureMultiCameraSession()
+            return
         }
 
         self.commitConfiguration()
+    }
+    
+    // MARK: - multi-camera configuration
+    
+    internal func configureMultiCameraSession() {
+        guard self.isMultiCameraSupported else {
+            print("NextLevel, multi-camera not supported on this device")
+            self.captureMode = .video // Fallback to single camera
+            return
+        }
+        
+        // Clean up existing session if needed
+        if let currentSession = self._captureSession {
+            self.executeClosureAsyncOnSessionQueueIfNecessary {
+                currentSession.stopRunning()
+                self.removeInputs(session: currentSession)
+                self.removeOutputs(session: currentSession)
+            }
+            self._captureSession = nil
+        }
+        
+        // Create multi-camera session
+        self._multiCamSession = AVCaptureMultiCamSession()
+        self._captureSession = self._multiCamSession
+        
+        guard let session = self._multiCamSession else {
+            print("NextLevel, failed to create multi-camera session")
+            return
+        }
+        
+        self.beginConfiguration()
+        
+        // Configure for best performance
+        if session.canSetSessionPreset(.hd1280x720) {
+            session.sessionPreset = .hd1280x720
+        }
+        
+        // Add inputs for each enabled camera
+        for position in self.multiCameraConfiguration.enabledCameras {
+            if let device = self.captureDevice(withPosition: position, forMultiCam: true) {
+                self.addMultiCameraInput(device: device, position: position)
+            }
+        }
+        
+        // Add outputs for each enabled camera
+        for position in self.multiCameraConfiguration.enabledCameras {
+            self.addMultiCameraVideoOutput(position: position)
+        }
+        
+        // Add audio if needed
+        if self.captureMode == .multiCamera {
+            if self.multiCameraConfiguration.audioSource != nil {
+                _ = self.addAudioOuput()
+            }
+        }
+        
+        // Configure connections
+        self.configureMultiCameraConnections()
+        
+        self.commitConfiguration()
+        
+        // Update preview layer
+        self.previewLayer.session = session
+        
+        // Notify delegate
+        DispatchQueue.main.async {
+            self.multiCameraDelegate?.nextLevel(self, didStartMultiCameraSession: self.multiCameraConfiguration.enabledCameras)
+        }
+    }
+    
+    private func captureDevice(withPosition position: NextLevelDevicePosition, forMultiCam: Bool) -> AVCaptureDevice? {
+        if forMultiCam {
+            let devices = AVCaptureDevice.multiCameraDevices()
+            return devices.first { $0.position == position }
+        } else {
+            return AVCaptureDevice.wideAngleVideoDevice(forPosition: position)
+        }
+    }
+    
+    private func addMultiCameraInput(device: AVCaptureDevice, position: NextLevelDevicePosition) {
+        guard let session = self._multiCamSession else {
+            return
+        }
+        
+        do {
+            // Configure device for multi-camera
+            try device.lockForConfiguration()
+            
+            // Set best format for multi-camera
+            if let bestFormat = device.bestMultiCameraFormat {
+                device.activeFormat = bestFormat
+            }
+            
+            // Configure frame rate
+            device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: CMTimeScale(self.multiCameraConfiguration.preferredFrameRate))
+            device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: CMTimeScale(self.multiCameraConfiguration.preferredFrameRate))
+            
+            // Configure other settings
+            if device.isFocusModeSupported(.continuousAutoFocus) {
+                device.focusMode = .continuousAutoFocus
+            }
+            
+            if device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposureMode = .continuousAutoExposure
+            }
+            
+            device.unlockForConfiguration()
+            
+            // Create and add input
+            let input = try AVCaptureDeviceInput(device: device)
+            
+            if session.canAddInput(input) {
+                session.addInput(input)
+                self._videoInputs[position] = input
+                
+                DispatchQueue.main.async {
+                    self.deviceDelegate?.nextLevel(self, didChangeDeviceFormat: device.activeFormat)
+                }
+            } else {
+                print("NextLevel, cannot add input for position: \(position)")
+            }
+            
+        } catch {
+            print("NextLevel, error configuring device for multi-camera: \(error)")
+        }
+    }
+    
+    private func addMultiCameraVideoOutput(position: NextLevelDevicePosition) {
+        guard let session = self._multiCamSession else {
+            return
+        }
+        
+        let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.alwaysDiscardsLateVideoFrames = false
+        
+        // Configure video settings
+        var videoSettings = [String(kCVPixelBufferPixelFormatTypeKey): Int(kCVPixelFormatType_32BGRA)]
+        #if !( targetEnvironment(simulator) )
+        let formatTypes = videoOutput.availableVideoPixelFormatTypes
+        var supportsFullRange = false
+        var supportsVideoRange = false
+        for format in formatTypes {
+            if format == Int(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) {
+                supportsFullRange = true
+            }
+            if format == Int(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange) {
+                supportsVideoRange = true
+            }
+        }
+        if supportsFullRange {
+            videoSettings[String(kCVPixelBufferPixelFormatTypeKey)] = Int(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+        } else if supportsVideoRange {
+            videoSettings[String(kCVPixelBufferPixelFormatTypeKey)] = Int(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange)
+        }
+        #endif
+        videoOutput.videoSettings = videoSettings
+        
+        if session.canAddOutput(videoOutput) {
+            session.addOutput(videoOutput)
+            self._videoOutputs[position] = videoOutput
+            
+            // Set up sample buffer delegate with unique queue for each output
+            let queueLabel = "engineering.NextLevel.MultiCameraVideo.\(position.rawValue)"
+            let queue = DispatchQueue(label: queueLabel, qos: .userInteractive)
+            videoOutput.setSampleBufferDelegate(self, queue: queue)
+        } else {
+            print("NextLevel, cannot add video output for position: \(position)")
+        }
+    }
+    
+    private func configureMultiCameraConnections() {
+        guard self._multiCamSession != nil else {
+            return
+        }
+        
+        // Connect each input to its corresponding output
+        for (position, input) in self._videoInputs {
+            guard let output = self._videoOutputs[position] else {
+                continue
+            }
+            
+            // Find the connection between this input and output
+            for connection in output.connections {
+                for port in connection.inputPorts {
+                    if port.input == input {
+                        // Configure the connection
+                        if connection.isVideoOrientationSupported {
+                            connection.videoOrientation = self.deviceOrientation
+                        }
+                        
+                        if connection.isVideoMirroringSupported {
+                            connection.isVideoMirrored = (position == .front)
+                        }
+                        
+                        if self.multiCameraConfiguration.videoStabilizationMode != .off && self.multiCameraConfiguration.videoStabilizationMode != .auto {
+                            if connection.isVideoStabilizationSupported {
+                                connection.preferredVideoStabilizationMode = self.multiCameraConfiguration.videoStabilizationMode
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func configureMetadataObjects() {
@@ -1255,6 +1529,19 @@ extension NextLevel {
             if let videoOutput = self._videoOutput, session.outputs.contains(videoOutput) {
                 session.removeOutput(videoOutput)
                 self._videoOutput = nil
+            }
+            break
+        case .multiCamera, .multiCameraWithoutAudio:
+            // Multi-camera uses different outputs
+            for (_, output) in self._videoOutputs {
+                if session.outputs.contains(output) {
+                    session.removeOutput(output)
+                }
+            }
+            self._videoOutputs.removeAll()
+            if let audioOutput = self._audioOutput, session.outputs.contains(audioOutput) {
+                session.removeOutput(audioOutput)
+                self._audioOutput = nil
             }
             break
         }
@@ -2549,6 +2836,58 @@ extension NextLevel {
             }
         }
     }
+    
+    // MARK: - multi-camera recording
+    
+    /// Start multi-camera recording
+    public func startMultiCameraRecording() throws {
+        guard captureMode == .multiCamera || captureMode == .multiCameraWithoutAudio else {
+            throw NextLevelError.notReadyToRecord
+        }
+        
+        guard !isRecording else {
+            throw NextLevelError.started
+        }
+        
+        // Create recording manager if needed
+        if _multiCameraRecording == nil {
+            _multiCameraRecording = NextLevelMultiCameraRecording(
+                recordingMode: multiCameraConfiguration.recordingMode
+            )
+            _multiCameraRecording?.configuration = multiCameraConfiguration
+        }
+        
+        // Prepare and start recording
+        try _multiCameraRecording?.prepareRecording()
+        try _multiCameraRecording?.startRecording()
+        _recording = true
+    }
+    
+    /// Stop multi-camera recording
+    public func stopMultiCameraRecording(completion: @escaping ([URL]?, Error?) -> Void) {
+        guard let recording = _multiCameraRecording else {
+            completion(nil, NextLevelError.nothingRecorded)
+            return
+        }
+        
+        recording.stopRecording { [weak self] (urls: [URL]?, error: Error?) in
+            self?._recording = false
+            self?._multiCameraRecording = nil
+            completion(urls, error)
+        }
+    }
+    
+    /// Pause multi-camera recording
+    public func pauseMultiCameraRecording() {
+        _multiCameraRecording?.pauseRecording()
+        _recording = false
+    }
+    
+    /// Resume multi-camera recording
+    public func resumeMultiCameraRecording() {
+        _multiCameraRecording?.resumeRecording()
+        _recording = true
+    }
 
     internal func beginRecordingNewClipIfNecessary() {
         if let session = self._recordingSession,
@@ -2830,7 +3169,48 @@ extension NextLevel {
 extension NextLevel: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate {
 
     public func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        if (self.captureMode == .videoWithoutAudio ||  self.captureMode == .arKitWithoutAudio) &&
+        // Handle multi-camera mode
+        if self.captureMode == .multiCamera || self.captureMode == .multiCameraWithoutAudio {
+            // Find which camera this output is from
+            for (position, output) in self._videoOutputs {
+                if captureOutput == output {
+                    // Notify multi-camera delegate
+                    DispatchQueue.main.async {
+                        self.multiCameraDelegate?.nextLevel(self, didOutputSampleBuffer: sampleBuffer, from: position)
+                        
+                        // Also send pixel buffer if available
+                        if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                            self.multiCameraDelegate?.nextLevel(self, didOutputPixelBuffer: pixelBuffer, from: position, timestamp: timestamp.seconds)
+                        }
+                    }
+                    
+                    // Also notify video delegate for compatibility
+                    self.videoDelegate?.nextLevel(self, willProcessRawVideoSampleBuffer: sampleBuffer, onQueue: DispatchQueue.main)
+                    
+                    // Store last frame based on position
+                    if position == self.multiCameraConfiguration.primaryCameraPosition {
+                        self._lastVideoFrame = sampleBuffer
+                    }
+                    
+                    // Handle recording if active
+                    if self._recording, let recording = self._multiCameraRecording {
+                        recording.processSampleBuffer(sampleBuffer, from: position)
+                    }
+                    
+                    return
+                }
+            }
+            
+            // Check if it's audio output
+            if let audioOutput = self._audioOutput, captureOutput == audioOutput {
+                self._lastAudioFrame = sampleBuffer
+                if self._recording, let recording = self._multiCameraRecording {
+                    recording.processAudioSampleBuffer(sampleBuffer, from: self.multiCameraConfiguration.audioSource)
+                }
+            }
+            
+        } else if (self.captureMode == .videoWithoutAudio ||  self.captureMode == .arKitWithoutAudio) &&
             captureOutput == self._videoOutput {
             self.videoDelegate?.nextLevel(self, willProcessRawVideoSampleBuffer: sampleBuffer, onQueue: self._sessionQueue)
             self._lastVideoFrame = sampleBuffer
@@ -3245,6 +3625,49 @@ extension NextLevel {
         if self.automaticallyUpdatesDeviceOrientation {
             self._sessionQueue.sync {
                 self.updateVideoOrientation()
+            }
+        }
+    }
+    
+    // MARK: - thermal state monitoring
+    
+    internal func addThermalStateObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(thermalStateDidChange),
+            name: ProcessInfo.thermalStateDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    internal func removeThermalStateObserver() {
+        NotificationCenter.default.removeObserver(
+            self,
+            name: ProcessInfo.thermalStateDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    @objc internal func thermalStateDidChange(_ notification: Notification) {
+        guard captureMode == .multiCamera || captureMode == .multiCameraWithoutAudio else {
+            return
+        }
+        
+        let thermalState = ProcessInfo.processInfo.thermalState
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Notify delegate
+            print("NextLevel, thermal state changed to: \(thermalState)")
+            
+            // Adjust configuration
+            self.multiCameraConfiguration.adjustForThermalState()
+            
+            // If critical, consider switching to single camera
+            if thermalState == .critical && self.multiCameraConfiguration.enabledCameras.count > 1 {
+                print("NextLevel, thermal state critical - consider switching to single camera mode")
+                // Could automatically switch here if desired
             }
         }
     }

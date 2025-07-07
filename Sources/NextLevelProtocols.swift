@@ -214,3 +214,29 @@ public protocol NextLevelPortraitEffectsMatteDelegate: AnyObject {
 public protocol NextLevelMetadataOutputObjectsDelegate: AnyObject {
     func metadataOutputObjects(_ nextLevel: NextLevel, didOutput metadataObjects: [AVMetadataObject])
 }
+
+// MARK: - NextLevelMultiCameraDelegate
+
+/// Multi-camera delegate, provides updates for multi-camera capture functionality
+public protocol NextLevelMultiCameraDelegate: AnyObject {
+    func nextLevel(_ nextLevel: NextLevel, 
+                   didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
+                   from position: NextLevelDevicePosition)
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didOutputPixelBuffer pixelBuffer: CVPixelBuffer,
+                   from position: NextLevelDevicePosition,
+                   timestamp: TimeInterval)
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didStartMultiCameraSession positions: Set<NextLevelDevicePosition>)
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didStopMultiCameraSession positions: Set<NextLevelDevicePosition>)
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   multiCameraSessionInterrupted positions: Set<NextLevelDevicePosition>)
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   multiCameraSessionInterruptionEnded positions: Set<NextLevelDevicePosition>)
+}

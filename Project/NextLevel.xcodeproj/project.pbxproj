@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00BF4406EBF47EC9B31FCD6F /* NextLevel+MultiCameraV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB9A25C2FB7650C2CDFCAAA /* NextLevel+MultiCameraV2.swift */; };
+		05738E3B27AFD20DE3B6526B /* NextLevelPhotoOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42762AC40D412CCB26F434AF /* NextLevelPhotoOutputManager.swift */; };
+		058EC07FA9CC43EEB013E0CA /* NextLevelMultiCameraSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BB101A1E9A3C94A74D6943 /* NextLevelMultiCameraSession.swift */; };
 		060D50EF1D5BC77E00247AD0 /* NextLevelSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060D50EE1D5BC77E00247AD0 /* NextLevelSession.swift */; };
 		060D50F11D5BF09F00247AD0 /* NextLevelConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060D50F01D5BF09F00247AD0 /* NextLevelConfiguration.swift */; };
 		060D50F41D5C4D5A00247AD0 /* NextLevelClip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060D50F31D5C4D5A00247AD0 /* NextLevelClip.swift */; };
@@ -37,8 +40,47 @@
 		06CF9CEA1F70678D0011CE09 /* NextLevel+CMSampleBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06CF9CE81F70678D0011CE09 /* NextLevel+CMSampleBuffer.swift */; };
 		06DB04A521C5ABA9007877CC /* NextLevelBufferRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DB04A421C5ABA9007877CC /* NextLevelBufferRenderer.swift */; };
 		06DB04A621C5ABA9007877CC /* NextLevelBufferRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DB04A421C5ABA9007877CC /* NextLevelBufferRenderer.swift */; };
+		0C84F8723B7E2DFADEEE887A /* NextLevelInputRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87EE857BD2BD8192E5FD8EDF /* NextLevelInputRouter.swift */; };
+		10DAE7B0F8A52E30532EB604 /* NextLevelMultiCameraBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFFFCBCD4C2FB0722DBF468 /* NextLevelMultiCameraBuilder.swift */; };
+		16B919BE1C7E91C53349F775 /* NextLevelCameraSetupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C2B953877097EC5FE3467D /* NextLevelCameraSetupCoordinator.swift */; };
+		2BAEF53FEA48816B6244E6FC /* NextLevelBufferManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32653A2E61D9645268706651 /* NextLevelBufferManager.swift */; };
+		322BE0E160DF2A1599517A2F /* NextLevelVideoOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A1AEAC6FB8D9EF1D7ADA21 /* NextLevelVideoOutputManager.swift */; };
+		3DD7437DC4A55E37F35D23DF /* NextLevelMultiCameraSessionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2572F0E9E3DBE96D64C9C6CC /* NextLevelMultiCameraSessionDelegate.swift */; };
+		41F08009EB93BB8AA9A153A3 /* NextLevelPerformanceOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C1A4D15242C1D7D7F6B4642 /* NextLevelPerformanceOptimizer.swift */; };
+		51E7A9305BB78DE9C63329BD /* NextLevelMultiCameraConfigurationV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6CB399B3553EABED9929867 /* NextLevelMultiCameraConfigurationV2.swift */; };
+		57C77BBCF24FE47E93D63E98 /* NextLevelCameraConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66003560EFE8F9EFD8E3E57 /* NextLevelCameraConfiguration.swift */; };
+		5E1A2D37555B000708B9D5FB /* NextLevelThermalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52B4821D62AA37D67B73AC1 /* NextLevelThermalManager.swift */; };
+		6204081224C6D319B899E1EE /* NextLevelBufferManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32653A2E61D9645268706651 /* NextLevelBufferManager.swift */; };
+		62D74067D7E5D782F83E4D93 /* NextLevelPerformanceOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C1A4D15242C1D7D7F6B4642 /* NextLevelPerformanceOptimizer.swift */; };
+		65B3F4ECEAB05545895E6659 /* NextLevel+MultiCameraV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB9A25C2FB7650C2CDFCAAA /* NextLevel+MultiCameraV2.swift */; };
 		6A3D083C1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3D083B1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift */; };
 		6A3D083D1FFCCC5A001E4AB1 /* NextLevel+UIImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3D083B1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift */; };
+		6E7DA917D4E769DA4A39D554 /* NextLevelDevicePositionExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1CB7F1D9A1E92D4AAD5B08 /* NextLevelDevicePositionExtended.swift */; };
+		739ED3B28E81A85295FAA05E /* NextLevelMultiCameraConfigurationV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6CB399B3553EABED9929867 /* NextLevelMultiCameraConfigurationV2.swift */; };
+		79AB627DD90CE316DD8489A7 /* NextLevelCameraSetupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C2B953877097EC5FE3467D /* NextLevelCameraSetupCoordinator.swift */; };
+		9896C99FF284C732FB4CAD26 /* NextLevelHardwareCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E49FF2177BDDB2021E1F148B /* NextLevelHardwareCapabilities.swift */; };
+		9916F892577F56C49E3510E5 /* NextLevelMultiCameraSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BB101A1E9A3C94A74D6943 /* NextLevelMultiCameraSession.swift */; };
+		9BE40712DE2C402D0FA701AC /* NextLevelInputRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87EE857BD2BD8192E5FD8EDF /* NextLevelInputRouter.swift */; };
+		9F18D07E0EBF6335011B9C19 /* NextLevelThermalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B52B4821D62AA37D67B73AC1 /* NextLevelThermalManager.swift */; };
+		A4A00B51438CF8020578B68B /* NextLevelPhotoOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42762AC40D412CCB26F434AF /* NextLevelPhotoOutputManager.swift */; };
+		A4A72C10E1E8B6B1F60F1FDE /* NextLevelMultiCameraAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62054C0C325F19A474FC7C7 /* NextLevelMultiCameraAPI.swift */; };
+		B79D54F59394442180306004 /* NextLevelMultiCameraV2Delegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D426E0788C3FE1DA4B1FEA4 /* NextLevelMultiCameraV2Delegate.swift */; };
+		C261E034B1A858E0A5939410 /* NextLevelResourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFBEFE255531AE9FEC1D246 /* NextLevelResourceManager.swift */; };
+		C3F44EA1F642B1AACC43C031 /* NextLevelOutputSynchronizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2792383D9D637565E63194EC /* NextLevelOutputSynchronizer.swift */; };
+		CD5446FDC35806C006217184 /* NextLevelVideoOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A1AEAC6FB8D9EF1D7ADA21 /* NextLevelVideoOutputManager.swift */; };
+		CEB3F95821508FFECFFEFF2A /* NextLevelMultiCameraV2Delegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D426E0788C3FE1DA4B1FEA4 /* NextLevelMultiCameraV2Delegate.swift */; };
+		CED2F3BF2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BE2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift */; };
+		CED2F3C02E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BC2E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift */; };
+		CED2F3C12E1A849E00204A3C /* NextLevelMultiCameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BD2E1A849E00204A3C /* NextLevelMultiCameraPreview.swift */; };
+		CED2F3C22E1A849E00204A3C /* NextLevelMultiCameraRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BE2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift */; };
+		CED2F3C32E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BC2E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift */; };
+		CED2F3C42E1A849E00204A3C /* NextLevelMultiCameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CED2F3BD2E1A849E00204A3C /* NextLevelMultiCameraPreview.swift */; };
+		CFDF150E837275E58035B983 /* NextLevelMigrationGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B8376619433502619992461 /* NextLevelMigrationGuide.swift */; };
+		CFF6B8CB0158AD58ED26C46B /* NextLevelCameraConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66003560EFE8F9EFD8E3E57 /* NextLevelCameraConfiguration.swift */; };
+		D4B7F2E75815D2085064097D /* NextLevelResourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFBEFE255531AE9FEC1D246 /* NextLevelResourceManager.swift */; };
+		DB87E2F25451B3A9AE3D3222 /* NextLevelDevicePositionExtended.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1CB7F1D9A1E92D4AAD5B08 /* NextLevelDevicePositionExtended.swift */; };
+		F527F0C6573515CE102CB8C1 /* NextLevelHardwareCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = E49FF2177BDDB2021E1F148B /* NextLevelHardwareCapabilities.swift */; };
+		F77F297576017E98DC3F9526 /* NextLevelOutputSynchronizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2792383D9D637565E63194EC /* NextLevelOutputSynchronizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,7 +109,31 @@
 		06CF9CE51F7064170011CE09 /* NextLevel+CIContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "NextLevel+CIContext.swift"; path = "../Sources/NextLevel+CIContext.swift"; sourceTree = "<group>"; };
 		06CF9CE81F70678D0011CE09 /* NextLevel+CMSampleBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "NextLevel+CMSampleBuffer.swift"; path = "../Sources/NextLevel+CMSampleBuffer.swift"; sourceTree = "<group>"; };
 		06DB04A421C5ABA9007877CC /* NextLevelBufferRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NextLevelBufferRenderer.swift; path = ../Sources/NextLevelBufferRenderer.swift; sourceTree = "<group>"; };
+		0C1A4D15242C1D7D7F6B4642 /* NextLevelPerformanceOptimizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelPerformanceOptimizer.swift; path = ../Sources/NextLevelPerformanceOptimizer.swift; sourceTree = "<group>"; };
+		1B8376619433502619992461 /* NextLevelMigrationGuide.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMigrationGuide.swift; path = ../Sources/NextLevelMigrationGuide.swift; sourceTree = "<group>"; };
+		2572F0E9E3DBE96D64C9C6CC /* NextLevelMultiCameraSessionDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraSessionDelegate.swift; path = ../Sources/NextLevelMultiCameraSessionDelegate.swift; sourceTree = "<group>"; };
+		2792383D9D637565E63194EC /* NextLevelOutputSynchronizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelOutputSynchronizer.swift; path = ../Sources/NextLevelOutputSynchronizer.swift; sourceTree = "<group>"; };
+		32653A2E61D9645268706651 /* NextLevelBufferManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelBufferManager.swift; path = ../Sources/NextLevelBufferManager.swift; sourceTree = "<group>"; };
+		42762AC40D412CCB26F434AF /* NextLevelPhotoOutputManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelPhotoOutputManager.swift; path = ../Sources/NextLevelPhotoOutputManager.swift; sourceTree = "<group>"; };
+		4D426E0788C3FE1DA4B1FEA4 /* NextLevelMultiCameraV2Delegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraV2Delegate.swift; path = ../Sources/NextLevelMultiCameraV2Delegate.swift; sourceTree = "<group>"; };
 		6A3D083B1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "NextLevel+UIImage.swift"; path = "../Sources/NextLevel+UIImage.swift"; sourceTree = "<group>"; };
+		7BFBEFE255531AE9FEC1D246 /* NextLevelResourceManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelResourceManager.swift; path = ../Sources/NextLevelResourceManager.swift; sourceTree = "<group>"; };
+		7F1CB7F1D9A1E92D4AAD5B08 /* NextLevelDevicePositionExtended.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelDevicePositionExtended.swift; path = ../Sources/NextLevelDevicePositionExtended.swift; sourceTree = "<group>"; };
+		87EE857BD2BD8192E5FD8EDF /* NextLevelInputRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelInputRouter.swift; path = ../Sources/NextLevelInputRouter.swift; sourceTree = "<group>"; };
+		92C2B953877097EC5FE3467D /* NextLevelCameraSetupCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelCameraSetupCoordinator.swift; path = ../Sources/NextLevelCameraSetupCoordinator.swift; sourceTree = "<group>"; };
+		9BB9A25C2FB7650C2CDFCAAA /* NextLevel+MultiCameraV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "NextLevel+MultiCameraV2.swift"; path = "../Sources/NextLevel+MultiCameraV2.swift"; sourceTree = "<group>"; };
+		A6CB399B3553EABED9929867 /* NextLevelMultiCameraConfigurationV2.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraConfigurationV2.swift; path = ../Sources/NextLevelMultiCameraConfigurationV2.swift; sourceTree = "<group>"; };
+		B52B4821D62AA37D67B73AC1 /* NextLevelThermalManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelThermalManager.swift; path = ../Sources/NextLevelThermalManager.swift; sourceTree = "<group>"; };
+		B62054C0C325F19A474FC7C7 /* NextLevelMultiCameraAPI.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraAPI.swift; path = ../Sources/NextLevelMultiCameraAPI.swift; sourceTree = "<group>"; };
+		BD5DE7B7CE5F88D2609135C0 /* MultiCameraExample.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MultiCameraExample.swift; path = Examples/MultiCameraExample.swift; sourceTree = "<group>"; };
+		CED2F3BC2E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraConfiguration.swift; path = ../Sources/NextLevelMultiCameraConfiguration.swift; sourceTree = SOURCE_ROOT; };
+		CED2F3BD2E1A849E00204A3C /* NextLevelMultiCameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraPreview.swift; path = ../Sources/NextLevelMultiCameraPreview.swift; sourceTree = SOURCE_ROOT; };
+		CED2F3BE2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraRecording.swift; path = ../Sources/NextLevelMultiCameraRecording.swift; sourceTree = SOURCE_ROOT; };
+		D1A1AEAC6FB8D9EF1D7ADA21 /* NextLevelVideoOutputManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelVideoOutputManager.swift; path = ../Sources/NextLevelVideoOutputManager.swift; sourceTree = "<group>"; };
+		E49FF2177BDDB2021E1F148B /* NextLevelHardwareCapabilities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelHardwareCapabilities.swift; path = ../Sources/NextLevelHardwareCapabilities.swift; sourceTree = "<group>"; };
+		E4BB101A1E9A3C94A74D6943 /* NextLevelMultiCameraSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraSession.swift; path = ../Sources/NextLevelMultiCameraSession.swift; sourceTree = "<group>"; };
+		E66003560EFE8F9EFD8E3E57 /* NextLevelCameraConfiguration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelCameraConfiguration.swift; path = ../Sources/NextLevelCameraConfiguration.swift; sourceTree = "<group>"; };
+		EEFFFCBCD4C2FB0722DBF468 /* NextLevelMultiCameraBuilder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NextLevelMultiCameraBuilder.swift; path = ../Sources/NextLevelMultiCameraBuilder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +179,8 @@
 				06AECC611AC3830800EFCD03 /* App */,
 				06C86E501D8208D900A43411 /* Framework */,
 				06AECC601AC3830800EFCD03 /* Products */,
+				0DADDD4EB2600EF706D3971A /* Sources */,
+				0EFAB109EE053F0CEB5E1CA1 /* Examples */,
 			);
 			sourceTree = "<group>";
 		};
@@ -153,6 +221,9 @@
 		06AECC841AC3892A00EFCD03 /* NextLevel */ = {
 			isa = PBXGroup;
 			children = (
+				CED2F3BC2E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift */,
+				CED2F3BD2E1A849E00204A3C /* NextLevelMultiCameraPreview.swift */,
+				CED2F3BE2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift */,
 				067FCFCD213DB57000B9B6C2 /* Session */,
 				06CF9CE41F7047B20011CE09 /* Extensions */,
 				065FD1A42275549D00580C6C /* Utilities */,
@@ -184,6 +255,41 @@
 				6A3D083B1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift */,
 			);
 			name = Extensions;
+			sourceTree = "<group>";
+		};
+		0DADDD4EB2600EF706D3971A /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				E66003560EFE8F9EFD8E3E57 /* NextLevelCameraConfiguration.swift */,
+				A6CB399B3553EABED9929867 /* NextLevelMultiCameraConfigurationV2.swift */,
+				7F1CB7F1D9A1E92D4AAD5B08 /* NextLevelDevicePositionExtended.swift */,
+				4D426E0788C3FE1DA4B1FEA4 /* NextLevelMultiCameraV2Delegate.swift */,
+				E4BB101A1E9A3C94A74D6943 /* NextLevelMultiCameraSession.swift */,
+				92C2B953877097EC5FE3467D /* NextLevelCameraSetupCoordinator.swift */,
+				87EE857BD2BD8192E5FD8EDF /* NextLevelInputRouter.swift */,
+				9BB9A25C2FB7650C2CDFCAAA /* NextLevel+MultiCameraV2.swift */,
+				D1A1AEAC6FB8D9EF1D7ADA21 /* NextLevelVideoOutputManager.swift */,
+				42762AC40D412CCB26F434AF /* NextLevelPhotoOutputManager.swift */,
+				32653A2E61D9645268706651 /* NextLevelBufferManager.swift */,
+				2792383D9D637565E63194EC /* NextLevelOutputSynchronizer.swift */,
+				7BFBEFE255531AE9FEC1D246 /* NextLevelResourceManager.swift */,
+				B52B4821D62AA37D67B73AC1 /* NextLevelThermalManager.swift */,
+				E49FF2177BDDB2021E1F148B /* NextLevelHardwareCapabilities.swift */,
+				0C1A4D15242C1D7D7F6B4642 /* NextLevelPerformanceOptimizer.swift */,
+				B62054C0C325F19A474FC7C7 /* NextLevelMultiCameraAPI.swift */,
+				EEFFFCBCD4C2FB0722DBF468 /* NextLevelMultiCameraBuilder.swift */,
+				2572F0E9E3DBE96D64C9C6CC /* NextLevelMultiCameraSessionDelegate.swift */,
+				1B8376619433502619992461 /* NextLevelMigrationGuide.swift */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		0EFAB109EE053F0CEB5E1CA1 /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				BD5DE7B7CE5F88D2609135C0 /* MultiCameraExample.swift */,
+			);
+			name = Examples;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -384,6 +490,9 @@
 				06DB04A521C5ABA9007877CC /* NextLevelBufferRenderer.swift in Sources */,
 				6A3D083C1FFCCC4B001E4AB1 /* NextLevel+UIImage.swift in Sources */,
 				06AECC671AC3830800EFCD03 /* CameraViewController.swift in Sources */,
+				CED2F3BF2E1A849E00204A3C /* NextLevelMultiCameraRecording.swift in Sources */,
+				CED2F3C02E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift in Sources */,
+				CED2F3C12E1A849E00204A3C /* NextLevelMultiCameraPreview.swift in Sources */,
 				06C86E391D81DD5800A43411 /* NextLevel+AVFoundation.swift in Sources */,
 				06CF9CE91F70678D0011CE09 /* NextLevel+CMSampleBuffer.swift in Sources */,
 				0699B4BD1D7942D4005958BC /* NextLevel+Foundation.swift in Sources */,
@@ -397,6 +506,22 @@
 				06AECC651AC3830800EFCD03 /* AppDelegate.swift in Sources */,
 				067FCFCB213DB3B700B9B6C2 /* NextLevelProtocols.swift in Sources */,
 				06CF9CE61F7064170011CE09 /* NextLevel+CIContext.swift in Sources */,
+				57C77BBCF24FE47E93D63E98 /* NextLevelCameraConfiguration.swift in Sources */,
+				51E7A9305BB78DE9C63329BD /* NextLevelMultiCameraConfigurationV2.swift in Sources */,
+				DB87E2F25451B3A9AE3D3222 /* NextLevelDevicePositionExtended.swift in Sources */,
+				CEB3F95821508FFECFFEFF2A /* NextLevelMultiCameraV2Delegate.swift in Sources */,
+				058EC07FA9CC43EEB013E0CA /* NextLevelMultiCameraSession.swift in Sources */,
+				16B919BE1C7E91C53349F775 /* NextLevelCameraSetupCoordinator.swift in Sources */,
+				9BE40712DE2C402D0FA701AC /* NextLevelInputRouter.swift in Sources */,
+				00BF4406EBF47EC9B31FCD6F /* NextLevel+MultiCameraV2.swift in Sources */,
+				322BE0E160DF2A1599517A2F /* NextLevelVideoOutputManager.swift in Sources */,
+				A4A00B51438CF8020578B68B /* NextLevelPhotoOutputManager.swift in Sources */,
+				2BAEF53FEA48816B6244E6FC /* NextLevelBufferManager.swift in Sources */,
+				F77F297576017E98DC3F9526 /* NextLevelOutputSynchronizer.swift in Sources */,
+				C261E034B1A858E0A5939410 /* NextLevelResourceManager.swift in Sources */,
+				9F18D07E0EBF6335011B9C19 /* NextLevelThermalManager.swift in Sources */,
+				9896C99FF284C732FB4CAD26 /* NextLevelHardwareCapabilities.swift in Sources */,
+				62D74067D7E5D782F83E4D93 /* NextLevelPerformanceOptimizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -406,6 +531,9 @@
 			files = (
 				06250AA01D8C57AF0008C903 /* NextLevelClip.swift in Sources */,
 				06250A9E1D8C57AA0008C903 /* NextLevelConfiguration.swift in Sources */,
+				CED2F3C22E1A849E00204A3C /* NextLevelMultiCameraRecording.swift in Sources */,
+				CED2F3C32E1A849E00204A3C /* NextLevelMultiCameraConfiguration.swift in Sources */,
+				CED2F3C42E1A849E00204A3C /* NextLevelMultiCameraPreview.swift in Sources */,
 				06CF9CEA1F70678D0011CE09 /* NextLevel+CMSampleBuffer.swift in Sources */,
 				06CF9CE71F7064170011CE09 /* NextLevel+CIContext.swift in Sources */,
 				067FCFCC213DB3B700B9B6C2 /* NextLevelProtocols.swift in Sources */,
@@ -417,6 +545,26 @@
 				065FD1A322741D2A00580C6C /* NextLevelGIFCreator.swift in Sources */,
 				06250AA31D8C57B70008C903 /* NextLevel+AVFoundation.swift in Sources */,
 				6A3D083D1FFCCC5A001E4AB1 /* NextLevel+UIImage.swift in Sources */,
+				CFF6B8CB0158AD58ED26C46B /* NextLevelCameraConfiguration.swift in Sources */,
+				739ED3B28E81A85295FAA05E /* NextLevelMultiCameraConfigurationV2.swift in Sources */,
+				6E7DA917D4E769DA4A39D554 /* NextLevelDevicePositionExtended.swift in Sources */,
+				B79D54F59394442180306004 /* NextLevelMultiCameraV2Delegate.swift in Sources */,
+				9916F892577F56C49E3510E5 /* NextLevelMultiCameraSession.swift in Sources */,
+				79AB627DD90CE316DD8489A7 /* NextLevelCameraSetupCoordinator.swift in Sources */,
+				0C84F8723B7E2DFADEEE887A /* NextLevelInputRouter.swift in Sources */,
+				65B3F4ECEAB05545895E6659 /* NextLevel+MultiCameraV2.swift in Sources */,
+				CD5446FDC35806C006217184 /* NextLevelVideoOutputManager.swift in Sources */,
+				05738E3B27AFD20DE3B6526B /* NextLevelPhotoOutputManager.swift in Sources */,
+				6204081224C6D319B899E1EE /* NextLevelBufferManager.swift in Sources */,
+				C3F44EA1F642B1AACC43C031 /* NextLevelOutputSynchronizer.swift in Sources */,
+				D4B7F2E75815D2085064097D /* NextLevelResourceManager.swift in Sources */,
+				5E1A2D37555B000708B9D5FB /* NextLevelThermalManager.swift in Sources */,
+				F527F0C6573515CE102CB8C1 /* NextLevelHardwareCapabilities.swift in Sources */,
+				41F08009EB93BB8AA9A153A3 /* NextLevelPerformanceOptimizer.swift in Sources */,
+				A4A72C10E1E8B6B1F60F1FDE /* NextLevelMultiCameraAPI.swift in Sources */,
+				10DAE7B0F8A52E30532EB604 /* NextLevelMultiCameraBuilder.swift in Sources */,
+				3DD7437DC4A55E37F35D23DF /* NextLevelMultiCameraSessionDelegate.swift in Sources */,
+				CFDF150E837275E58035B983 /* NextLevelMigrationGuide.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
