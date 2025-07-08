@@ -35,7 +35,7 @@ public class NextLevelMultiCameraPreview: UIView {
     // MARK: - properties
     
     /// Preview layers indexed by camera position
-    public private(set) var previewLayers: [NextLevelDevicePosition: AVCaptureVideoPreviewLayer] = [:]
+    public var previewLayers: [NextLevelDevicePosition: AVCaptureVideoPreviewLayer] = [:]
     
     /// Primary preview layer (convenience accessor)
     public var primaryPreviewLayer: AVCaptureVideoPreviewLayer? {
@@ -72,6 +72,13 @@ public class NextLevelMultiCameraPreview: UIView {
     
     /// Enable/disable animations
     public var animationsEnabled: Bool = true
+    
+    /// Video gravity for individual preview layers
+    public var videoGravityPerCamera: [NextLevelDevicePosition: AVLayerVideoGravity] = [:] {
+        didSet {
+            updateVideoGravity()
+        }
+    }
     
     /// Corner radius for preview layers
     public var previewCornerRadius: CGFloat = 12.0 {
@@ -183,7 +190,7 @@ public class NextLevelMultiCameraPreview: UIView {
     /// Create a preview layer for a specific camera position
     private func createPreviewLayer(for position: NextLevelDevicePosition) -> AVCaptureVideoPreviewLayer {
         let previewLayer = AVCaptureVideoPreviewLayer()
-        previewLayer.videoGravity = .resizeAspectFill
+        previewLayer.videoGravity = videoGravityPerCamera[position] ?? .resizeAspectFill
         previewLayer.masksToBounds = true
         
         // Configure based on position
@@ -346,5 +353,70 @@ public class NextLevelMultiCameraPreview: UIView {
         
         // TODO: Trigger focus through NextLevel
         // This would require adding a method to NextLevel to focus a specific camera
+    }
+    
+    // MARK: - individual preview layer access
+    
+    /// Get preview layer for specific camera position
+    public func previewLayer(for position: NextLevelDevicePosition) -> AVCaptureVideoPreviewLayer? {
+        return previewLayers[position]
+    }
+    
+    /// Get all active preview layers
+    public func allPreviewLayers() -> [AVCaptureVideoPreviewLayer] {
+        return Array(previewLayers.values)
+    }
+    
+    /// Create a detached preview layer for embedding in custom views
+    public func createDetachedPreviewLayer(for position: NextLevelDevicePosition) -> AVCaptureVideoPreviewLayer? {
+        guard configuration?.enabledCameras.contains(position) == true,
+              let session = self.session else {
+            return nil
+        }
+        
+        let detachedLayer = AVCaptureVideoPreviewLayer(session: session)
+        detachedLayer.videoGravity = videoGravityPerCamera[position] ?? .resizeAspectFill
+        detachedLayer.masksToBounds = true
+        
+        // Note: This creates a new preview layer that shares the same session
+        // The caller is responsible for managing this layer's lifecycle
+        return detachedLayer
+    }
+    
+    /// Enable or disable a specific preview layer
+    public func setPreviewEnabled(_ enabled: Bool, for position: NextLevelDevicePosition) {
+        previewLayers[position]?.isHidden = !enabled
+    }
+    
+    /// Update video gravity for all preview layers
+    private func updateVideoGravity() {
+        for (position, layer) in previewLayers {
+            if let gravity = videoGravityPerCamera[position] {
+                layer.videoGravity = gravity
+            }
+        }
+    }
+    
+    /// Configure individual preview layer properties
+    public func configurePreviewLayer(for position: NextLevelDevicePosition,
+                                    cornerRadius: CGFloat? = nil,
+                                    borderWidth: CGFloat? = nil,
+                                    borderColor: UIColor? = nil,
+                                    videoGravity: AVLayerVideoGravity? = nil) {
+        guard let layer = previewLayers[position] else { return }
+        
+        if let cornerRadius = cornerRadius {
+            layer.cornerRadius = cornerRadius
+        }
+        if let borderWidth = borderWidth {
+            layer.borderWidth = borderWidth
+        }
+        if let borderColor = borderColor {
+            layer.borderColor = borderColor.cgColor
+        }
+        if let videoGravity = videoGravity {
+            layer.videoGravity = videoGravity
+            videoGravityPerCamera[position] = videoGravity
+        }
     }
 }

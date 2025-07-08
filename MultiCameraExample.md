@@ -245,6 +245,116 @@ multiCameraPreview.layout = .custom { size in
 
 ## Advanced Features
 
+### Individual Preview Layer Access
+
+```swift
+// Access individual preview layers directly
+if let backCameraLayer = multiCameraPreview.previewLayer(for: .back) {
+    // Configure the back camera preview layer
+    backCameraLayer.cornerRadius = 10
+    backCameraLayer.borderWidth = 2
+    backCameraLayer.borderColor = UIColor.systemBlue.cgColor
+}
+
+// Get all active preview layers
+let allLayers = multiCameraPreview.allPreviewLayers()
+print("Active preview layers: \(allLayers.count)")
+
+// Configure preview layers individually
+multiCameraPreview.configurePreviewLayer(
+    for: .front,
+    cornerRadius: 15,
+    borderWidth: 3,
+    borderColor: .systemGreen,
+    videoGravity: .resizeAspect
+)
+
+// Set different video gravity for each camera
+multiCameraPreview.videoGravityPerCamera = [
+    .back: .resizeAspectFill,
+    .front: .resizeAspect
+]
+
+// Enable/disable specific preview layers
+multiCameraPreview.setPreviewEnabled(false, for: .front) // Hide front camera
+multiCameraPreview.setPreviewEnabled(true, for: .front)  // Show front camera
+```
+
+### Custom Preview Layer Embedding
+
+```swift
+// Create detached preview layers for custom layouts
+class CustomMultiCameraView: UIView {
+    
+    private var backCameraContainer: UIView!
+    private var frontCameraContainer: UIView!
+    private var backPreviewLayer: AVCaptureVideoPreviewLayer?
+    private var frontPreviewLayer: AVCaptureVideoPreviewLayer?
+    
+    func setupCustomPreviews(with multiCameraPreview: NextLevelMultiCameraPreview) {
+        // Create containers
+        backCameraContainer = UIView(frame: CGRect(x: 0, y: 0, 
+                                                  width: bounds.width, 
+                                                  height: bounds.height * 0.7))
+        frontCameraContainer = UIView(frame: CGRect(x: 20, y: bounds.height * 0.7 + 20, 
+                                                   width: 120, 
+                                                   height: 160))
+        
+        addSubview(backCameraContainer)
+        addSubview(frontCameraContainer)
+        
+        // Create detached preview layers
+        if let backLayer = multiCameraPreview.createDetachedPreviewLayer(for: .back) {
+            backLayer.frame = backCameraContainer.bounds
+            backLayer.videoGravity = .resizeAspectFill
+            backCameraContainer.layer.addSublayer(backLayer)
+            backPreviewLayer = backLayer
+        }
+        
+        if let frontLayer = multiCameraPreview.createDetachedPreviewLayer(for: .front) {
+            frontLayer.frame = frontCameraContainer.bounds
+            frontLayer.videoGravity = .resizeAspect
+            frontLayer.cornerRadius = 10
+            frontLayer.masksToBounds = true
+            frontCameraContainer.layer.addSublayer(frontLayer)
+            frontPreviewLayer = frontLayer
+            
+            // Add styling to front camera container
+            frontCameraContainer.layer.cornerRadius = 10
+            frontCameraContainer.layer.borderWidth = 2
+            frontCameraContainer.layer.borderColor = UIColor.white.cgColor
+        }
+    }
+}
+```
+
+### Direct Preview Layer Manipulation
+
+```swift
+// Access the preview layers dictionary directly
+for (position, layer) in multiCameraPreview.previewLayers {
+    print("Camera at position \(position)")
+    
+    // Apply custom transforms
+    if position == .front {
+        // Mirror the front camera horizontally
+        layer.transform = CATransform3DMakeScale(-1, 1, 1)
+    }
+    
+    // Add custom animations
+    let pulseAnimation = CABasicAnimation(keyPath: "opacity")
+    pulseAnimation.fromValue = 1.0
+    pulseAnimation.toValue = 0.5
+    pulseAnimation.duration = 0.5
+    pulseAnimation.autoreverses = true
+    pulseAnimation.repeatCount = .infinity
+    
+    if position == .back && isRecording {
+        layer.add(pulseAnimation, forKey: "recordingPulse")
+    }
+}
+```
+
 ### Camera Switching
 
 ```swift
