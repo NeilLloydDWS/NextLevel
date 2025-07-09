@@ -70,22 +70,10 @@ public class NextLevelMultiCameraConfiguration: NextLevelConfiguration {
     // MARK: - properties
     
     /// Primary camera position (default: back)
-    public var primaryCameraPosition: NextLevelDevicePosition = .back {
-        didSet {
-            if primaryCameraPosition == secondaryCameraPosition {
-                secondaryCameraPosition = primaryCameraPosition == .back ? .front : .back
-            }
-        }
-    }
+    public var primaryCameraPosition: NextLevelDevicePosition = .back
     
     /// Secondary camera position (default: front)
-    public var secondaryCameraPosition: NextLevelDevicePosition = .front {
-        didSet {
-            if secondaryCameraPosition == primaryCameraPosition {
-                primaryCameraPosition = secondaryCameraPosition == .back ? .front : .back
-            }
-        }
-    }
+    public var secondaryCameraPosition: NextLevelDevicePosition = .front
     
     /// Set of enabled camera positions
     public var enabledCameras: Set<NextLevelDevicePosition> = [.back, .front]
@@ -144,10 +132,8 @@ public class NextLevelMultiCameraConfiguration: NextLevelConfiguration {
             errors.append("Too many cameras enabled. Maximum is \(maxSimultaneousCameras)")
         }
         
-        // Validate camera positions
-        if primaryCameraPosition == secondaryCameraPosition && enabledCameras.count > 1 {
-            errors.append("Primary and secondary cameras must have different positions")
-        }
+        // Validate camera positions - allow same position for multi-camera on same side
+        // This is valid for devices with multiple back cameras (wide, ultra-wide, telephoto)
         
         // Validate frame rate
         if preferredFrameRate < 1 || preferredFrameRate > 240 {

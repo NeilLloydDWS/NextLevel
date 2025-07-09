@@ -299,6 +299,11 @@ public class NextLevel: NSObject {
     public var isMultiCameraSupported: Bool {
         return AVCaptureMultiCamSession.isMultiCamSupported
     }
+    
+    /// Last captured photo from secondary camera
+    public var capturedSecondaryPhoto: UIImage? {
+        return _capturedSecondaryPhoto
+    }
 
     // audio configuration
 
@@ -456,7 +461,12 @@ public class NextLevel: NSObject {
     // Multi-camera support
     internal var _multiCamSession: AVCaptureMultiCamSession?
     internal var _videoInputs: [NextLevelDevicePosition: AVCaptureDeviceInput] = [:]
+    internal var _additionalVideoInputs: [AVCaptureDeviceInput] = [] // For multiple cameras at same position
     internal var _videoOutputs: [NextLevelDevicePosition: AVCaptureVideoDataOutput] = [:]
+    internal var _additionalVideoOutputs: [AVCaptureVideoDataOutput] = [] // For multiple cameras at same position
+    internal var _multiCameraPhotoOutputs: [NextLevelDevicePosition: AVCapturePhotoOutput] = [:] // Photo outputs for multi-camera
+    internal var _shouldCapturePhotoFromSecondary: Bool = false
+    internal var _capturedSecondaryPhoto: UIImage?
     internal var _multiCameraRecording: NextLevelMultiCameraRecording?
     internal var multiCameraSessionV2: NextLevelMultiCameraSession?
     internal var multiCameraConfigurationV2: NextLevelMultiCameraConfigurationV2?
@@ -694,6 +704,15 @@ extension NextLevel {
     internal func setupAVSession() {
         // Note: use nextLevelSessionDidStart to ensure a device and session are available for configuration or format changes
         self.executeClosureAsyncOnSessionQueueIfNecessary {
+            // Check if we need multi-camera session upfront
+            if self.captureMode == .multiCamera || self.captureMode == .multiCameraWithoutAudio {
+                // Directly setup multi-camera session without creating regular session first
+                self._sessionConfigurationCount = 0
+                self._recordingSession = NextLevelSession(queue: self._sessionQueue, queueKey: NextLevelCaptureSessionQueueSpecificKey)
+                self.configureMultiCameraSession()
+                return
+            }
+            
             // setup AV capture sesssion
             self._captureSession = AVCaptureSession()
             self._sessionConfigurationCount = 0
@@ -955,9 +974,7 @@ extension NextLevel {
             // no AV inputs to setup
             break
         case .multiCamera, .multiCameraWithoutAudio:
-            // Multi-camera uses a different configuration method
-            self.commitConfiguration()
-            self.configureMultiCameraSession()
+            // Multi-camera is handled in setupAVSession
             return
         }
 
@@ -967,19 +984,26 @@ extension NextLevel {
     // MARK: - multi-camera configuration
     
     internal func configureMultiCameraSession() {
+        print("[DEBUG] configureMultiCameraSession called")
+        print("[DEBUG] isMultiCameraSupported: \(self.isMultiCameraSupported)")
+        print("[DEBUG] AVCaptureMultiCamSession.isMultiCamSupported: \(AVCaptureMultiCamSession.isMultiCamSupported)")
+        
         guard self.isMultiCameraSupported else {
             print("NextLevel, multi-camera not supported on this device")
             self.captureMode = .video // Fallback to single camera
             return
         }
         
+        // Reset configuration count since we're replacing the session
+        self._sessionConfigurationCount = 0
+        
         // Clean up existing session if needed
         if let currentSession = self._captureSession {
-            self.executeClosureAsyncOnSessionQueueIfNecessary {
+            if currentSession.isRunning {
                 currentSession.stopRunning()
-                self.removeInputs(session: currentSession)
-                self.removeOutputs(session: currentSession)
             }
+            self.removeInputs(session: currentSession)
+            self.removeOutputs(session: currentSession)
             self._captureSession = nil
         }
         
@@ -1000,15 +1024,54 @@ extension NextLevel {
         }
         
         // Add inputs for each enabled camera
-        for position in self.multiCameraConfiguration.enabledCameras {
-            if let device = self.captureDevice(withPosition: position, forMultiCam: true) {
-                self.addMultiCameraInput(device: device, position: position)
+        print("[DEBUG] Enabled cameras: \(self.multiCameraConfiguration.enabledCameras)")
+        
+        // Special handling for two back cameras
+        if self.multiCameraConfiguration.primaryCameraPosition == .back &&
+           self.multiCameraConfiguration.secondaryCameraPosition == .back &&
+           self.multiCameraConfiguration.enabledCameras.contains(.back) {
+            
+            print("[DEBUG] Configuring two back cameras")
+            
+            // Add wide angle camera first
+            if let wideDevice = self.captureDevice(withPosition: .back, forMultiCam: true) {
+                print("[DEBUG] Adding wide angle camera: \(wideDevice.localizedName)")
+                self.addMultiCameraInput(device: wideDevice, position: .back)
+            }
+            
+            // Add ultra-wide camera second
+            if let ultraWideDevice = self.captureDevice(withPosition: .back, forMultiCam: true) {
+                print("[DEBUG] Adding ultra-wide camera: \(ultraWideDevice.localizedName)")
+                self.addMultiCameraInput(device: ultraWideDevice, position: .back)
+            }
+            
+            // Add other positions if any
+            for position in self.multiCameraConfiguration.enabledCameras where position != .back {
+                if let device = self.captureDevice(withPosition: position, forMultiCam: true) {
+                    self.addMultiCameraInput(device: device, position: position)
+                }
+            }
+        } else {
+            // Standard behavior for different positions
+            for position in self.multiCameraConfiguration.enabledCameras {
+                print("[DEBUG] Looking for device at position: \(position)")
+                if let device = self.captureDevice(withPosition: position, forMultiCam: true) {
+                    print("[DEBUG] Found device: \(device.localizedName)")
+                    self.addMultiCameraInput(device: device, position: position)
+                } else {
+                    print("[DEBUG] Could not find device for position: \(position)")
+                }
             }
         }
         
-        // Add outputs for each enabled camera
-        for position in self.multiCameraConfiguration.enabledCameras {
-            self.addMultiCameraVideoOutput(position: position)
+        // Add outputs for each camera input
+        for (position, _) in self._videoInputs {
+            self.addMultiCameraVideoOutput(position: position, isAdditional: false)
+        }
+        
+        // Add outputs for additional cameras
+        for _ in self._additionalVideoInputs {
+            self.addMultiCameraVideoOutput(position: .back, isAdditional: true)
         }
         
         // Add audio if needed
@@ -1026,6 +1089,13 @@ extension NextLevel {
         // Update preview layer
         self.previewLayer.session = session
         
+        // Start the multi-camera session
+        if !session.isRunning {
+            self.delegate?.nextLevelSessionWillStart(self)
+            session.startRunning()
+            self.previewDelegate?.nextLevelWillStartPreview(self)
+        }
+        
         // Notify delegate
         DispatchQueue.main.async {
             self.multiCameraDelegate?.nextLevel(self, didStartMultiCameraSession: self.multiCameraConfiguration.enabledCameras)
@@ -1035,6 +1105,34 @@ extension NextLevel {
     private func captureDevice(withPosition position: NextLevelDevicePosition, forMultiCam: Bool) -> AVCaptureDevice? {
         if forMultiCam {
             let devices = AVCaptureDevice.multiCameraDevices()
+            print("[DEBUG] Available multi-camera devices: \(devices.map { "\($0.deviceType) at \($0.position)" })")
+            
+            // For multi-camera with both cameras on back, we need to handle this specially
+            if position == .back && self.multiCameraConfiguration.primaryCameraPosition == .back && 
+               self.multiCameraConfiguration.secondaryCameraPosition == .back {
+                // We need to return different cameras for each call
+                // Use a counter or check existing inputs to determine which camera to return
+                let existingBackCameras = self._videoInputs.filter { $0.key == .back }.count
+                
+                if existingBackCameras == 0 {
+                    // First back camera - return wide angle
+                    let wideCamera = devices.first { $0.position == .back && $0.deviceType == .builtInWideAngleCamera }
+                    print("[DEBUG] Returning wide angle camera for first back position")
+                    return wideCamera
+                } else {
+                    // Second back camera - return ultra-wide or telephoto
+                    if let ultraWide = devices.first(where: { $0.position == .back && $0.deviceType == .builtInUltraWideCamera }) {
+                        print("[DEBUG] Returning ultra-wide camera for second back position")
+                        return ultraWide
+                    } else if let telephoto = devices.first(where: { $0.position == .back && $0.deviceType == .builtInTelephotoCamera }) {
+                        print("[DEBUG] Returning telephoto camera for second back position")
+                        return telephoto
+                    }
+                }
+            }
+            
+            // Default behavior for different positions
+            print("[DEBUG] Using default behavior for position: \(position)")
             return devices.first { $0.position == position }
         } else {
             return AVCaptureDevice.wideAngleVideoDevice(forPosition: position)
@@ -1075,7 +1173,17 @@ extension NextLevel {
             
             if session.canAddInput(input) {
                 session.addInput(input)
-                self._videoInputs[position] = input
+                
+                // Handle multiple cameras at same position
+                if self._videoInputs[position] != nil {
+                    // Already have a camera at this position, add to additional inputs
+                    self._additionalVideoInputs.append(input)
+                    print("[DEBUG] Added additional input for position \(position)")
+                } else {
+                    // First camera at this position
+                    self._videoInputs[position] = input
+                    print("[DEBUG] Added primary input for position \(position)")
+                }
                 
                 DispatchQueue.main.async {
                     self.deviceDelegate?.nextLevel(self, didChangeDeviceFormat: device.activeFormat)
@@ -1089,7 +1197,7 @@ extension NextLevel {
         }
     }
     
-    private func addMultiCameraVideoOutput(position: NextLevelDevicePosition) {
+    private func addMultiCameraVideoOutput(position: NextLevelDevicePosition, isAdditional: Bool) {
         guard let session = self._multiCamSession else {
             return
         }
@@ -1121,10 +1229,16 @@ extension NextLevel {
         
         if session.canAddOutput(videoOutput) {
             session.addOutput(videoOutput)
-            self._videoOutputs[position] = videoOutput
+            
+            if isAdditional {
+                self._additionalVideoOutputs.append(videoOutput)
+            } else {
+                self._videoOutputs[position] = videoOutput
+            }
             
             // Set up sample buffer delegate with unique queue for each output
-            let queueLabel = "engineering.NextLevel.MultiCameraVideo.\(position.rawValue)"
+            let outputIndex = isAdditional ? self._additionalVideoOutputs.count : 0
+            let queueLabel = "engineering.NextLevel.MultiCameraVideo.\(position.rawValue).\(outputIndex)"
             let queue = DispatchQueue(label: queueLabel, qos: .userInteractive)
             videoOutput.setSampleBufferDelegate(self, queue: queue)
         } else {
@@ -1154,6 +1268,38 @@ extension NextLevel {
                         
                         if connection.isVideoMirroringSupported {
                             connection.isVideoMirrored = (position == .front)
+                        }
+                        
+                        if self.multiCameraConfiguration.videoStabilizationMode != .off && self.multiCameraConfiguration.videoStabilizationMode != .auto {
+                            if connection.isVideoStabilizationSupported {
+                                connection.preferredVideoStabilizationMode = self.multiCameraConfiguration.videoStabilizationMode
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Connect additional inputs to additional outputs
+        for (index, input) in self._additionalVideoInputs.enumerated() {
+            guard index < self._additionalVideoOutputs.count else {
+                continue
+            }
+            
+            let output = self._additionalVideoOutputs[index]
+            
+            // Find the connection between this input and output
+            for connection in output.connections {
+                for port in connection.inputPorts {
+                    if port.input == input {
+                        // Configure the connection
+                        if connection.isVideoOrientationSupported {
+                            connection.videoOrientation = self.deviceOrientation
+                        }
+                        
+                        // Additional cameras are back cameras, not mirrored
+                        if connection.isVideoMirroringSupported {
+                            connection.isVideoMirrored = false
                         }
                         
                         if self.multiCameraConfiguration.videoStabilizationMode != .off && self.multiCameraConfiguration.videoStabilizationMode != .auto {
@@ -2841,6 +2987,7 @@ extension NextLevel {
     
     /// Start multi-camera recording
     public func startMultiCameraRecording() throws {
+        
         guard captureMode == .multiCamera || captureMode == .multiCameraWithoutAudio else {
             throw NextLevelError.notReadyToRecord
         }
@@ -2858,20 +3005,31 @@ extension NextLevel {
         }
         
         // Prepare and start recording
-        try _multiCameraRecording?.prepareRecording()
-        try _multiCameraRecording?.startRecording()
-        _recording = true
+        do {
+            try _multiCameraRecording?.prepareRecording()
+            try _multiCameraRecording?.startRecording()
+            _recording = true
+        } catch {
+            throw error
+        }
     }
     
     /// Stop multi-camera recording
     public func stopMultiCameraRecording(completion: @escaping ([URL]?, Error?) -> Void) {
+        guard _recording else {
+            completion(nil, NextLevelError.nothingRecorded)
+            return
+        }
+        
         guard let recording = _multiCameraRecording else {
             completion(nil, NextLevelError.nothingRecorded)
             return
         }
         
+        // Mark as not recording immediately to prevent multiple stops
+        _recording = false
+        
         recording.stopRecording { [weak self] (urls: [URL]?, error: Error?) in
-            self?._recording = false
             self?._multiCameraRecording = nil
             completion(urls, error)
         }
@@ -2888,7 +3046,43 @@ extension NextLevel {
         _multiCameraRecording?.resumeRecording()
         _recording = true
     }
+    
+    /// Capture photo from secondary camera during multi-camera recording
+    public func capturePhotoFromSecondaryCamera() {
+        guard captureMode == .multiCamera || captureMode == .multiCameraWithoutAudio else {
+            print("NextLevel, photo capture only available in multi-camera mode")
+            return
+        }
+        
+        // In multi-camera mode, we'll capture a frame from the video instead
+        // This is triggered in the delegate when we receive a frame from the secondary camera
+        _shouldCapturePhotoFromSecondary = true
+        print("NextLevel, will capture photo from next secondary camera frame")
+    }
+    
+    /// Clear the captured secondary photo
+    public func clearCapturedSecondaryPhoto() {
+        _capturedSecondaryPhoto = nil
+    }
 
+    internal func capturePhotoFromVideoBuffer(pixelBuffer: CVPixelBuffer) {
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let context = CIContext()
+        
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+            print("NextLevel, failed to create image from pixel buffer")
+            return
+        }
+        
+        let uiImage = UIImage(cgImage: cgImage)
+        _capturedSecondaryPhoto = uiImage
+        
+        // Notify delegate that a photo was captured
+        DispatchQueue.main.async {
+            self.photoDelegate?.nextLevelDidCompletePhotoCapture(self)
+        }
+    }
+    
     internal func beginRecordingNewClipIfNecessary() {
         if let session = self._recordingSession,
             session.isReady == false {
@@ -3172,34 +3366,63 @@ extension NextLevel: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudi
         // Handle multi-camera mode
         if self.captureMode == .multiCamera || self.captureMode == .multiCameraWithoutAudio {
             // Find which camera this output is from
+            var foundOutput = false
+            var outputPosition: NextLevelDevicePosition = .unspecified
+            
+            // Check primary outputs
             for (position, output) in self._videoOutputs {
                 if captureOutput == output {
-                    // Notify multi-camera delegate
-                    DispatchQueue.main.async {
-                        self.multiCameraDelegate?.nextLevel(self, didOutputSampleBuffer: sampleBuffer, from: position)
+                    foundOutput = true
+                    outputPosition = position
+                    break
+                }
+            }
+            
+            // Check additional outputs (secondary back camera)
+            if !foundOutput {
+                for (index, output) in self._additionalVideoOutputs.enumerated() {
+                    if captureOutput == output {
+                        foundOutput = true
+                        // For additional outputs, we'll use .front as a temporary workaround
+                        // This allows the delegate to distinguish between primary and secondary back cameras
+                        outputPosition = .front
+                        break
+                    }
+                }
+            }
+            
+            if foundOutput {
+                // Notify multi-camera delegate
+                DispatchQueue.main.async {
+                    self.multiCameraDelegate?.nextLevel(self, didOutputSampleBuffer: sampleBuffer, from: outputPosition)
+                    
+                    // Also send pixel buffer if available
+                    if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                        self.multiCameraDelegate?.nextLevel(self, didOutputPixelBuffer: pixelBuffer, from: outputPosition, timestamp: timestamp.seconds)
                         
-                        // Also send pixel buffer if available
-                        if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-                            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-                            self.multiCameraDelegate?.nextLevel(self, didOutputPixelBuffer: pixelBuffer, from: position, timestamp: timestamp.seconds)
+                        // Capture photo from secondary camera if requested
+                        if self._shouldCapturePhotoFromSecondary && outputPosition == .front {
+                            self._shouldCapturePhotoFromSecondary = false
+                            self.capturePhotoFromVideoBuffer(pixelBuffer: pixelBuffer)
                         }
                     }
-                    
-                    // Also notify video delegate for compatibility
-                    self.videoDelegate?.nextLevel(self, willProcessRawVideoSampleBuffer: sampleBuffer, onQueue: DispatchQueue.main)
-                    
-                    // Store last frame based on position
-                    if position == self.multiCameraConfiguration.primaryCameraPosition {
-                        self._lastVideoFrame = sampleBuffer
-                    }
-                    
-                    // Handle recording if active
-                    if self._recording, let recording = self._multiCameraRecording {
-                        recording.processSampleBuffer(sampleBuffer, from: position)
-                    }
-                    
-                    return
                 }
+                
+                // Also notify video delegate for compatibility
+                self.videoDelegate?.nextLevel(self, willProcessRawVideoSampleBuffer: sampleBuffer, onQueue: DispatchQueue.main)
+                
+                // Store last frame based on position
+                if outputPosition == self.multiCameraConfiguration.primaryCameraPosition {
+                    self._lastVideoFrame = sampleBuffer
+                }
+                
+                // Handle recording if active
+                if self._recording, let recording = self._multiCameraRecording {
+                    recording.processSampleBuffer(sampleBuffer, from: outputPosition)
+                }
+                
+                return
             }
             
             // Check if it's audio output

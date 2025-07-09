@@ -44,6 +44,12 @@ class CameraViewController: UIViewController {
     internal var focusView: FocusIndicatorView?
     internal var controlDockView: UIView?
     internal var metadataObjectViews: [UIView]?
+    
+    // Multi-camera preview layers
+    internal var secondaryPreviewLayer: AVSampleBufferDisplayLayer?
+    internal var primaryImageView: UIImageView?
+    internal var secondaryImageView: UIImageView?
+    internal var ciContext: CIContext?
 
     internal var recordButton: UIImageView?
     internal var flipButton: UIButton?
@@ -87,9 +93,37 @@ class CameraViewController: UIViewController {
         if let previewView = self.previewView {
             previewView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             previewView.backgroundColor = UIColor.black
+            self.view.addSubview(previewView)
+            
+            // Always use the standard preview layer for primary camera
             NextLevel.shared.previewLayer.frame = previewView.bounds
             previewView.layer.addSublayer(NextLevel.shared.previewLayer)
-            self.view.addSubview(previewView)
+            
+            // Create secondary camera preview if multi-camera is supported
+            if NextLevel.shared.isMultiCameraSupported {
+                // Create CIContext for image conversion
+                self.ciContext = CIContext(options: [CIContextOption.useSoftwareRenderer: false])
+                
+                // Create a secondary preview using UIImageView (will be updated via delegate)
+                let secondaryFrame = CGRect(x: previewView.bounds.width * 0.5,
+                                          y: 0,
+                                          width: previewView.bounds.width * 0.5,
+                                          height: previewView.bounds.height)
+                self.secondaryImageView = UIImageView(frame: secondaryFrame)
+                if let secondaryImageView = self.secondaryImageView {
+                    secondaryImageView.autoresizingMask = [.flexibleWidth, .flexibleHeight, .flexibleLeftMargin]
+                    secondaryImageView.contentMode = .scaleAspectFill
+                    secondaryImageView.clipsToBounds = true
+                    secondaryImageView.backgroundColor = .black
+                    previewView.addSubview(secondaryImageView)
+                }
+                
+                // Resize primary preview to half width
+                NextLevel.shared.previewLayer.frame = CGRect(x: 0,
+                                                           y: 0,
+                                                           width: previewView.bounds.width * 0.5,
+                                                           height: previewView.bounds.height)
+            }
         }
 
         self.focusView = FocusIndicatorView(frame: .zero)
@@ -103,7 +137,7 @@ class CameraViewController: UIViewController {
             recordButton.sizeToFit()
 
             longPressGestureRecognizer.delegate = self
-            longPressGestureRecognizer.minimumPressDuration = 0.05
+            longPressGestureRecognizer.minimumPressDuration = 0.2
             longPressGestureRecognizer.allowableMovement = 10.0
             recordButton.addGestureRecognizer(longPressGestureRecognizer)
         }
@@ -170,6 +204,7 @@ class CameraViewController: UIViewController {
         nextLevel.videoDelegate = self
         nextLevel.photoDelegate = self
         nextLevel.metadataObjectsDelegate = self
+        nextLevel.multiCameraDelegate = self
 
         // video configuration
         nextLevel.videoConfiguration.preset = AVCaptureSession.Preset.hd1280x720
@@ -189,8 +224,42 @@ class CameraViewController: UIViewController {
 
         if NextLevel.authorizationStatus(forMediaType: AVMediaType.video) == .authorized &&
            NextLevel.authorizationStatus(forMediaType: AVMediaType.audio) == .authorized {
+            
+            let nextLevel = NextLevel.shared
+            
+            // Configure multi-camera if supported before starting
+            if nextLevel.isMultiCameraSupported {
+                nextLevel.captureMode = .multiCamera
+                
+                let config = nextLevel.multiCameraConfiguration
+                // Use two back cameras - wide and ultra-wide
+                config.primaryCameraPosition = .back       // Wide angle camera
+                config.secondaryCameraPosition = .back     // Ultra-wide camera (NextLevel will handle this)
+                config.enabledCameras = [.back]            // We need NextLevel to handle multiple back cameras
+                config.outputMode = .separate
+                config.recordingMode = .separate
+                config.preferredFrameRate = 30
+                config.optimizeForDevice()
+                
+                // Validate configuration
+                let validation = config.validate()
+                if !validation.isValid {
+                    print("Multi-camera configuration errors: \(validation.errors)")
+                }
+            }
+            
             do {
-                try NextLevel.shared.start()
+                try nextLevel.start()
+                
+                // For multi-camera mode, the single preview layer will show the primary camera
+                // NextLevel's current implementation doesn't expose separate preview layers
+                // The delegate callbacks will provide access to both camera feeds
+                
+                // Add a small delay to ensure everything is initialized
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    print("Multi-camera session should be ready now")
+                    print("Capture mode after start: \(nextLevel.captureMode)")
+                }
             } catch {
                 print("NextLevel, failed to start camera session")
             }
@@ -199,8 +268,26 @@ class CameraViewController: UIViewController {
                 print("NextLevel, authorization updated for media \(mediaType) status \(status)")
                 if NextLevel.authorizationStatus(forMediaType: AVMediaType.video) == .authorized &&
                     NextLevel.authorizationStatus(forMediaType: AVMediaType.audio) == .authorized {
+                    
+                    let nextLevel = NextLevel.shared
+                    
+                    // Configure multi-camera if supported before starting
+                    if nextLevel.isMultiCameraSupported {
+                        nextLevel.captureMode = .multiCamera
+                        
+                        let config = nextLevel.multiCameraConfiguration
+                        // Use two back cameras - wide and ultra-wide
+                        config.primaryCameraPosition = .back       // Wide angle camera
+                        config.secondaryCameraPosition = .back     // Ultra-wide camera (NextLevel will handle this)
+                        config.enabledCameras = [.back, .front]    // Enable multiple cameras (NextLevel will map to actual devices)
+                        config.outputMode = .separate
+                        config.recordingMode = .separate
+                        config.preferredFrameRate = 30
+                        config.previewLayout = .sideBySide(splitRatio: 0.5)
+                        config.optimizeForDevice()
+                    }
+                    
                     do {
-                        let nextLevel = NextLevel.shared
                         try nextLevel.start()
                     } catch {
                         print("NextLevel, failed to start camera session")
@@ -214,8 +301,26 @@ class CameraViewController: UIViewController {
                 print("NextLevel, authorization updated for media \(mediaType) status \(status)")
                 if NextLevel.authorizationStatus(forMediaType: AVMediaType.video) == .authorized &&
                     NextLevel.authorizationStatus(forMediaType: AVMediaType.audio) == .authorized {
+                    
+                    let nextLevel = NextLevel.shared
+                    
+                    // Configure multi-camera if supported before starting
+                    if nextLevel.isMultiCameraSupported {
+                        nextLevel.captureMode = .multiCamera
+                        
+                        let config = nextLevel.multiCameraConfiguration
+                        // Use two back cameras - wide and ultra-wide
+                        config.primaryCameraPosition = .back       // Wide angle camera
+                        config.secondaryCameraPosition = .back     // Ultra-wide camera (NextLevel will handle this)
+                        config.enabledCameras = [.back, .front]    // Enable multiple cameras (NextLevel will map to actual devices)
+                        config.outputMode = .separate
+                        config.recordingMode = .separate
+                        config.preferredFrameRate = 30
+                        config.previewLayout = .sideBySide(splitRatio: 0.5)
+                        config.optimizeForDevice()
+                    }
+                    
                     do {
-                        let nextLevel = NextLevel.shared
                         try nextLevel.start()
                     } catch {
                         print("NextLevel, failed to start camera session")
@@ -258,56 +363,97 @@ extension CameraViewController {
 extension CameraViewController {
 
     internal func startCapture() {
+        // Prevent multiple starts
+        guard !NextLevel.shared.isRecording else {
+            print("Recording already in progress, ignoring start request")
+            return
+        }
+        
         self.photoTapGestureRecognizer?.isEnabled = false
         UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseInOut, animations: {
             self.recordButton?.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
         }) { (_: Bool) in
         }
-        NextLevel.shared.record()
+        
+        // Use multi-camera recording
+        if NextLevel.shared.captureMode == .multiCamera {
+            do {
+                try NextLevel.shared.startMultiCameraRecording()
+                print("Multi-camera recording started successfully")
+                
+                // Capture a photo from the secondary camera after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NextLevel.shared.capturePhotoFromSecondaryCamera()
+                }
+            } catch {
+                print("Failed to start multi-camera recording: \(error)")
+                print("Error details: \(error.localizedDescription)")
+            }
+        } else {
+            NextLevel.shared.record()
+        }
     }
 
     internal func pauseCapture() {
         UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseOut, animations: {
             self.recordButton?.transform = .identity
         }) { (_: Bool) in
-            NextLevel.shared.pause()
+            if NextLevel.shared.captureMode == .multiCamera {
+                NextLevel.shared.pauseMultiCameraRecording()
+            } else {
+                NextLevel.shared.pause()
+            }
         }
     }
 
     internal func endCapture() {
-        self.photoTapGestureRecognizer?.isEnabled = true
-
-        if let session = NextLevel.shared.session {
-
-            if session.clips.count > 1 {
-                session.mergeClips(usingPreset: AVAssetExportPresetHighestQuality, completionHandler: { (url: URL?, error: Error?) in
-                    if let url = url {
-                        self.saveVideo(withURL: url)
-                    } else if let _ = error {
-                        print("failed to merge clips at the end of capture \(String(describing: error))")
-                    }
-                })
-            } else if let lastClipUrl = session.lastClipUrl {
-                self.saveVideo(withURL: lastClipUrl)
-            } else if session.currentClipHasStarted {
-                session.endClip(completionHandler: { (clip, error) in
-                    if error == nil, let url = clip?.url {
-                        self.saveVideo(withURL: url)
-                    } else {
-                        print("Error saving video: \(error?.localizedDescription ?? "")")
-                    }
-                })
-            } else {
-                // prompt that the video has been saved
-                let alertController = UIAlertController(title: "Video Capture", message: "Not enough video captured!", preferredStyle: .alert)
-                let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-                alertController.addAction(okAction)
-                self.present(alertController, animated: true, completion: nil)
-            }
-
+        // Prevent multiple calls
+        guard NextLevel.shared.isRecording else {
+            print("Not recording, ignoring end capture request")
+            return
         }
-
-    }
+        
+        self.photoTapGestureRecognizer?.isEnabled = true
+        
+        // Handle multi-camera recording end
+        if NextLevel.shared.captureMode == .multiCamera {
+            NextLevel.shared.stopMultiCameraRecording { (urls, error) in
+                if let urls = urls, !urls.isEmpty {
+                    print("Received \(urls.count) video files from multi-camera recording")
+                    self.saveMultipleVideos(withURLs: urls)
+                } else if let error = error {
+                    print("Error stopping multi-camera recording: \(error)")
+                }
+            }
+        } else if let session = NextLevel.shared.session {
+            // Handle standard recording end
+                if session.clips.count > 1 {
+                    session.mergeClips(usingPreset: AVAssetExportPresetHighestQuality, completionHandler: { (url: URL?, error: Error?) in
+                        if let url = url {
+                            self.saveVideo(withURL: url)
+                        } else if let _ = error {
+                            print("failed to merge clips at the end of capture \(String(describing: error))")
+                        }
+                    })
+                } else if let lastClipUrl = session.lastClipUrl {
+                    self.saveVideo(withURL: lastClipUrl)
+                } else if session.currentClipHasStarted {
+                    session.endClip(completionHandler: { (clip, error) in
+                        if error == nil, let url = clip?.url {
+                            self.saveVideo(withURL: url)
+                        } else {
+                            print("Error saving video: \(error?.localizedDescription ?? "")")
+                        }
+                    })
+                } else {
+                    // prompt that the video has been saved
+                    let alertController = UIAlertController(title: "Video Capture", message: "Not enough video captured!", preferredStyle: .alert)
+                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertController.addAction(okAction)
+                    self.present(alertController, animated: true, completion: nil)
+                }
+            }
+        }
 
     internal func authorizePhotoLibaryIfNecessary() {
         let authorizationStatus = PHPhotoLibrary.authorizationStatus()
@@ -344,6 +490,78 @@ extension CameraViewController {
 
 extension CameraViewController {
 
+    internal func saveMultipleVideos(withURLs urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        
+        var savedCount = 0
+        var processedCount = 0
+        let totalCount = urls.count
+        
+        let dispatchGroup = DispatchGroup()
+        
+        for url in urls {
+            dispatchGroup.enter()
+            
+            PHPhotoLibrary.shared().performChanges({
+                let albumAssetCollection = self.albumAssetCollection(withTitle: CameraViewController.nextLevelAlbumTitle)
+                if albumAssetCollection == nil {
+                    let changeRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: CameraViewController.nextLevelAlbumTitle)
+                    _ = changeRequest.placeholderForCreatedAssetCollection
+                }}, completionHandler: { (_: Bool, _: Error?) in
+                    if let albumAssetCollection = self.albumAssetCollection(withTitle: CameraViewController.nextLevelAlbumTitle) {
+                        PHPhotoLibrary.shared().performChanges({
+                            if let assetChangeRequest = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url) {
+                                let assetCollectionChangeRequest = PHAssetCollectionChangeRequest(for: albumAssetCollection)
+                                let enumeration: NSArray = [assetChangeRequest.placeholderForCreatedAsset!]
+                                assetCollectionChangeRequest?.addAssets(enumeration)
+                            }
+                        }, completionHandler: { (success2: Bool, _: Error?) in
+                            if success2 {
+                                savedCount += 1
+                            }
+                            processedCount += 1
+                            dispatchGroup.leave()
+                        })
+                    } else {
+                        processedCount += 1
+                        dispatchGroup.leave()
+                    }
+                })
+        }
+        
+        // Wait for all saves to complete, then show one alert
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            // Only show alert if not already presenting
+            guard self?.presentedViewController == nil else { return }
+            
+            if savedCount == totalCount {
+                // prompt that the video has been saved
+                DispatchQueue.main.async {
+                    let alertController = UIAlertController(title: "Recording Saved!", message: "Video saved to the camera roll.", preferredStyle: .alert)
+                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertController.addAction(okAction)
+                    self?.present(alertController, animated: true, completion: nil)
+                }
+            } else if savedCount > 0 {
+                // prompt that some videos have been saved
+                DispatchQueue.main.async {
+                    let alertController = UIAlertController(title: "Partial Success", message: "Saved \(savedCount) of \(totalCount) videos.", preferredStyle: .alert)
+                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertController.addAction(okAction)
+                    self?.present(alertController, animated: true, completion: nil)
+                }
+            } else {
+                // prompt that the save failed
+                DispatchQueue.main.async {
+                    let alertController = UIAlertController(title: "Oops!", message: "Failed to save videos!", preferredStyle: .alert)
+                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertController.addAction(okAction)
+                    self?.present(alertController, animated: true, completion: nil)
+                }
+            }
+        }
+    }
+    
     internal func saveVideo(withURL url: URL) {
         PHPhotoLibrary.shared().performChanges({
             let albumAssetCollection = self.albumAssetCollection(withTitle: CameraViewController.nextLevelAlbumTitle)
@@ -362,16 +580,20 @@ extension CameraViewController {
                         DispatchQueue.main.async { [weak self] in
                             if success2 == true {
                                 // prompt that the video has been saved
-                                let alertController = UIAlertController(title: "Video Saved!", message: "Saved to the camera roll.", preferredStyle: .alert)
-                                let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-                                alertController.addAction(okAction)
-                                self?.present(alertController, animated: true, completion: nil)
+                                DispatchQueue.main.async {
+                                    let alertController = UIAlertController(title: "Video Saved!", message: "Saved to the camera roll.", preferredStyle: .alert)
+                                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                                    alertController.addAction(okAction)
+                                    self?.present(alertController, animated: true, completion: nil)
+                                }
                             } else {
                                 // prompt that the video has been saved
-                                let alertController = UIAlertController(title: "Oops!", message: "Something failed!", preferredStyle: .alert)
-                                let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-                                alertController.addAction(okAction)
-                                self?.present(alertController, animated: true, completion: nil)
+                                DispatchQueue.main.async {
+                                    let alertController = UIAlertController(title: "Oops!", message: "Something failed!", preferredStyle: .alert)
+                                    let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                                    alertController.addAction(okAction)
+                                    self?.present(alertController, animated: true, completion: nil)
+                                }
                             }
                         }
                 })
@@ -400,10 +622,12 @@ extension CameraViewController {
                         assetCollectionChangeRequest?.addAssets(enumeration)
                     }, completionHandler: { (success2: Bool, _: Error?) in
                         if success2 == true {
-                            let alertController = UIAlertController(title: "Photo Saved!", message: "Saved to the camera roll.", preferredStyle: .alert)
-                            let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-                            alertController.addAction(okAction)
-                            self.present(alertController, animated: true, completion: nil)
+                            DispatchQueue.main.async {
+                                let alertController = UIAlertController(title: "Photo Saved!", message: "Saved to the camera roll.", preferredStyle: .alert)
+                                let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
+                                alertController.addAction(okAction)
+                                self.present(alertController, animated: true, completion: nil)
+                            }
                         }
                     })
                 }
@@ -455,7 +679,12 @@ extension CameraViewController: UIGestureRecognizerDelegate {
         case .cancelled:
             fallthrough
         case .failed:
-            self.pauseCapture()
+            // For multi-camera mode, end the capture instead of pausing
+            if NextLevel.shared.captureMode == .multiCamera {
+                self.endCapture()
+            } else {
+                self.pauseCapture()
+            }
             fallthrough
         default:
             break
@@ -484,6 +713,7 @@ extension CameraViewController {
             focusView.startAnimation()
         }
 
+        // Focus handling - NextLevel will handle multi-camera focus internally
         let adjustedPoint = NextLevel.shared.previewLayer.captureDevicePointConverted(fromLayerPoint: tapPoint)
         NextLevel.shared.focusExposeAndAdjustWhiteBalance(atAdjustedPoint: adjustedPoint)
     }
@@ -724,10 +954,10 @@ extension CameraViewController: NextLevelPhotoDelegate {
                             }
                         }, completionHandler: { (success2: Bool, _: Error?) in
                             if success2 == true {
-                                let alertController = UIAlertController(title: "Photo Saved!", message: "Saved to the camera roll.", preferredStyle: .alert)
-                                let okAction = UIAlertAction(title: "OK", style: .default, handler: nil)
-                                alertController.addAction(okAction)
-                                self.present(alertController, animated: true, completion: nil)
+                                DispatchQueue.main.async {
+                                    // Don't show photo alert to avoid conflicts with video alert
+                                    print("Photo saved successfully")
+                                }
                             }
                         })
                     }
@@ -739,6 +969,12 @@ extension CameraViewController: NextLevelPhotoDelegate {
     }
 
     func nextLevelDidCompletePhotoCapture(_ nextLevel: NextLevel) {
+        // Save the captured photo from secondary camera
+        if let photo = nextLevel.capturedSecondaryPhoto {
+            self.savePhoto(photoImage: photo)
+            // Clear the photo after saving
+            nextLevel.clearCapturedSecondaryPhoto()
+        }
     }
 
     func nextLevel(_ nextLevel: NextLevel, didFinishProcessingPhoto photo: AVCapturePhoto) {
@@ -795,5 +1031,71 @@ extension CameraViewController: NextLevelMetadataOutputObjectsDelegate {
                 previewView.addSubview(view)
             }
         }
+    }
+}
+
+// MARK: - NextLevelMultiCameraDelegate
+
+extension CameraViewController: NextLevelMultiCameraDelegate {
+    
+    func nextLevel(_ nextLevel: NextLevel, 
+                   didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
+                   from position: NextLevelDevicePosition) {
+        // Handle raw sample buffers from each camera if needed
+    }
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didOutputPixelBuffer pixelBuffer: CVPixelBuffer,
+                   from position: NextLevelDevicePosition,
+                   timestamp: TimeInterval) {
+        // Display secondary camera feed in the image view
+        // When using two back cameras, NextLevel temporarily marks the secondary as .front
+        guard position == .front,
+              let secondaryImageView = self.secondaryImageView,
+              let context = self.ciContext else {
+            return
+        }
+        
+        // Perform image conversion on background queue to avoid blocking
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Create CIImage from pixel buffer
+            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+            
+            // Don't rotate for back cameras - they should have the same orientation
+            let rotatedImage = ciImage
+            
+            // Convert to CGImage
+            guard let cgImage = context.createCGImage(rotatedImage, from: rotatedImage.extent) else {
+                return
+            }
+            
+            // Update UI on main thread
+            let uiImage = UIImage(cgImage: cgImage)
+            DispatchQueue.main.async {
+                secondaryImageView.image = uiImage
+            }
+        }
+    }
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didStartMultiCameraSession positions: Set<NextLevelDevicePosition>) {
+        print("Multi-camera session started with cameras: \(positions)")
+    }
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   didStopMultiCameraSession positions: Set<NextLevelDevicePosition>) {
+        print("Multi-camera session stopped")
+    }
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   multiCameraSessionInterrupted positions: Set<NextLevelDevicePosition>) {
+        print("Multi-camera session interrupted for cameras: \(positions)")
+    }
+    
+    func nextLevel(_ nextLevel: NextLevel,
+                   multiCameraSessionInterruptionEnded positions: Set<NextLevelDevicePosition>) {
+        print("Multi-camera session interruption ended for cameras: \(positions)")
     }
 }

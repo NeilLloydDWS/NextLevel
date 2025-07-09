@@ -141,33 +141,33 @@ public class NextLevelMultiCameraRecording {
         
         state = .preparing
         
-        recordingQueue.async { [weak self] in
-            guard let self = self else { return }
-            
-            do {
-                switch self.recordingMode {
-                case .separate:
-                    try self.prepareSeparateRecording(configuration: configuration)
-                case .combined:
-                    try self.prepareCombinedRecording(configuration: configuration)
-                case .composited:
-                    try self.prepareCompositedRecording(configuration: configuration)
-                }
-                
-                self.state = .idle
-            } catch {
-                print("NextLevel, failed to prepare recording: \(error)")
-                self.state = .idle
+        // Prepare synchronously to avoid race conditions
+        do {
+            switch self.recordingMode {
+            case .separate:
+                try self.prepareSeparateRecording(configuration: configuration)
+            case .combined:
+                try self.prepareCombinedRecording(configuration: configuration)
+            case .composited:
+                try self.prepareCompositedRecording(configuration: configuration)
             }
+            
+            // State remains preparing, will be set to idle by startRecording
+        } catch {
+            print("NextLevel, failed to prepare recording: \(error)")
+            self.state = .idle
+            throw error
         }
     }
     
     /// Start recording
     public func startRecording() throws {
-        guard state == .idle else {
+        guard state == .preparing || state == .idle else {
             throw MultiCameraRecordingError.notReadyToRecord
         }
         
+        // Don't start writers here - they need to be started with the first frame's timestamp
+        // Just update state to indicate we're ready to record
         state = .recording
         startTime = nil
         lastVideoTime = nil
@@ -231,19 +231,16 @@ public class NextLevelMultiCameraRecording {
                 self.startTime = timestamp
             }
             
-            // Calculate relative time
-            let relativeTime = CMTimeSubtract(timestamp, self.startTime!)
-            
             switch self.recordingMode {
             case .separate:
-                self.writeSeparateVideoFrame(sampleBuffer, position: position, time: relativeTime)
+                self.writeSeparateVideoFrame(sampleBuffer, position: position, time: timestamp)
             case .combined:
-                self.writeCombinedVideoFrame(sampleBuffer, position: position, time: relativeTime)
+                self.writeCombinedVideoFrame(sampleBuffer, position: position, time: timestamp)
             case .composited:
-                self.writeCompositedVideoFrame(sampleBuffer, position: position, time: relativeTime)
+                self.writeCompositedVideoFrame(sampleBuffer, position: position, time: timestamp)
             }
             
-            self.lastVideoTime = relativeTime
+            self.lastVideoTime = timestamp
         }
     }
     
@@ -262,11 +259,8 @@ public class NextLevelMultiCameraRecording {
                 self.startTime = timestamp
             }
             
-            // Calculate relative time
-            let relativeTime = CMTimeSubtract(timestamp, self.startTime!)
-            
             // Write audio based on mode
-            self.writeAudioFrame(sampleBuffer, position: position, time: relativeTime)
+            self.writeAudioFrame(sampleBuffer, position: position, time: timestamp)
         }
     }
     
@@ -277,7 +271,18 @@ public class NextLevelMultiCameraRecording {
         cleanup()
         
         // Create asset writer for each camera
-        for position in configuration.enabledCameras {
+        // When using two back cameras, we need to handle the position mapping
+        var positionsToSetup: [NextLevelDevicePosition] = []
+        
+        if configuration.primaryCameraPosition == .back && 
+           configuration.secondaryCameraPosition == .back {
+            // Special case: two back cameras - only record video from primary
+            positionsToSetup = [.back]
+        } else {
+            positionsToSetup = Array(configuration.enabledCameras)
+        }
+        
+        for position in positionsToSetup {
             let fileName = generateFileName(for: position)
             let url = outputDirectory.appendingPathComponent(fileName)
             recordingURLs[position] = url
@@ -450,7 +455,14 @@ public class NextLevelMultiCameraRecording {
         let timestamp = dateFormatter.string(from: Date())
         
         if let position = position {
-            let positionString = position == .front ? "Front" : "Back"
+            let positionString: String
+            if position == .front && configuration?.primaryCameraPosition == .back && 
+               configuration?.secondaryCameraPosition == .back {
+                // This is actually the second back camera
+                positionString = "Back_UltraWide"
+            } else {
+                positionString = position == .front ? "Front" : "Back_Wide"
+            }
             return "\(fileNamePrefix)_\(positionString)_\(timestamp)\(suffix).mp4"
         } else {
             return "\(fileNamePrefix)_\(timestamp)\(suffix).mp4"
@@ -493,12 +505,19 @@ public class NextLevelMultiCameraRecording {
         }
         
         if writer.status == .unknown {
-            writer.startWriting()
+            if !writer.startWriting() {
+                print("NextLevel, failed to start writer: \(writer.error?.localizedDescription ?? "unknown")")
+                return
+            }
             writer.startSession(atSourceTime: time)
         }
         
         if writer.status == .writing && input.isReadyForMoreMediaData {
-            input.append(sampleBuffer)
+            if !input.append(sampleBuffer) {
+                print("NextLevel, failed to append sample buffer")
+            }
+        } else if writer.status == .failed {
+            print("NextLevel, writer failed with error: \(writer.error?.localizedDescription ?? "unknown")")
         }
     }
     
@@ -509,12 +528,19 @@ public class NextLevelMultiCameraRecording {
         }
         
         if writer.status == .unknown {
-            writer.startWriting()
+            if !writer.startWriting() {
+                print("NextLevel, failed to start writer: \(writer.error?.localizedDescription ?? "unknown")")
+                return
+            }
             writer.startSession(atSourceTime: time)
         }
         
         if writer.status == .writing && input.isReadyForMoreMediaData {
-            input.append(sampleBuffer)
+            if !input.append(sampleBuffer) {
+                print("NextLevel, failed to append sample buffer")
+            }
+        } else if writer.status == .failed {
+            print("NextLevel, writer failed with error: \(writer.error?.localizedDescription ?? "unknown")")
         }
     }
     
